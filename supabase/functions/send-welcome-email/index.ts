@@ -109,7 +109,7 @@ Deno.serve(async (req: Request) => {
 </html>
     `;
 
-    // Check if RESEND_API_KEY environment variable is configured
+    // Resend API key: loaded securely from Supabase secrets environment
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
 
     if (resendApiKey) {
@@ -128,24 +128,17 @@ Deno.serve(async (req: Request) => {
       });
 
       const resendData = await resendRes.json();
+      console.log("[Resend Delivery Response]", resendRes.status, resendData);
+
       return new Response(
-        JSON.stringify({ success: true, provider: "resend", data: resendData }),
+        JSON.stringify({
+          success: resendRes.ok,
+          provider: "resend",
+          data: resendData
+        }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    // If Resend API key is not yet set in Supabase secrets, acknowledge success gracefully
-    console.log(`[Email Automation] Queued welcome email for ${email} with community link ${communityLink}`);
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        provider: "simulation",
-        message: "Email queued. Add RESEND_API_KEY to Supabase secrets for direct delivery.",
-        recipient: email
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
   } catch (error) {
     console.error("[Email Automation Error]:", error);
     return new Response(

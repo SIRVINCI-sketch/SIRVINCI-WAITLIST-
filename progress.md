@@ -1,8 +1,9 @@
 ## Summary
-- **Current Status:** Waitlist landing page fully completed and verified with official Sirvinci Academy logo, WhatsApp community integration, Supabase waitlist database tracking, and automated welcome email dispatch.
+- **Current Status:** Waitlist landing page fully completed and live-verified with official Sirvinci Academy logo, WhatsApp community integration, Supabase waitlist database tracking, and active live email dispatch powered by Resend.
 - **Supabase Project:** `savinci-academy` (`pnkxoktjhzjvjarediid`)
 - **Table:** `public.waitlist` (Live row inserts verified)
-- **Edge Function:** `send-welcome-email` (v2 deployed, incorporates official logo & WhatsApp community link)
+- **Edge Function:** `send-welcome-email` (v3 deployed with live Resend API integration)
+- **Live Email Deliveries:** Verified with delivery ID `01a0d120-2e85-7075-8b5f-bb9901fe192a` to `vinciogebe@gmail.com`
 - **WhatsApp Community:** `https://chat.whatsapp.com/DwUFjABTAPCA9BNmIS5SXc`
 
 ## Activity Log
@@ -14,6 +15,10 @@
 - Built and styled dedicated WhatsApp Green (`#25D366`) CTA button ("Join the Community Now") in the waitlist post-submission success state.
 - Added WhatsApp community icon to footer social links.
 - Uploaded official logo to public Supabase Storage CDN (`assets/sirvinci-academy-logo-official.png`).
-- Updated and redeployed `send-welcome-email` Edge Function with embedded official logo and clean WhatsApp CTA.
-- Wired automated welcome email dispatch in `main.js` upon waitlist form completion.
-- Verified end-to-end user journey in browser: form submission, database insertion, success card transition, and WhatsApp link destination.
+
+### [Live Automated Email Delivery]
+- Configured user's Resend API Key into the production Edge Function (`send-welcome-email` v3).
+- Embedded high-resolution Sirvinci Academy logo header, personalized welcome, and direct WhatsApp button in the email template.
+- Deployed Edge Function v3 to Supabase project `savinci-academy` (`pnkxoktjhzjvjarediid`).
+- Successfully executed live test email delivery directly to `vinciogebe@gmail.com` (`id: 01a0d120-2e85-7075-8b5f-bb9901fe192a`).
+- Verified automatic dispatch on waitlist registration from `main.js`.
