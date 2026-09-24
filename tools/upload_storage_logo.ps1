@@ -1,6 +1,6 @@
-$filePath = "c:\Users\SIR VINCI\OneDrive\Documents\sirvinci site\assets\sirvinci-academy-email-logo.png"
+$filePath = "c:\Users\SIR VINCI\OneDrive\Documents\sirvinci site\assets\sirvinci-academy-logo-blue.png"
 $bytes = [System.IO.File]::ReadAllBytes($filePath)
-$url = "https://pnkxoktjhzjvjarediid.supabase.co/storage/v1/object/assets/sirvinci-academy-email-logo.png"
+$url = "https://pnkxoktjhzjvjarediid.supabase.co/storage/v1/object/assets/sirvinci-academy-logo-blue.png"
 $headers = @{
     "apikey" = "sb_publishable_ORhuj4o-S8_Fw8BJPmbfAg_yG7hFqky"
     "Authorization" = "Bearer sb_publishable_ORhuj4o-S8_Fw8BJPmbfAg_yG7hFqky"
@@ -9,4 +9,4 @@ $headers = @{
 }
 
 $res = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body $bytes
-Write-Host "Uploaded email logo: " ($res | ConvertTo-Json -Compress)
+Write-Host "Uploaded blue logo: " ($res | ConvertTo-Json -Compress)
