@@ -1,15 +1,19 @@
 ## Summary
-- **Current Status:** Waitlist landing page fully completed, branded as **Sirvinci Academy**, styled with the primary Brand Blue, and connected live to Supabase.
+- **Current Status:** Waitlist landing page fully completed and verified with official Sirvinci Academy logo, WhatsApp community integration, Supabase waitlist database tracking, and automated welcome email dispatch.
 - **Supabase Project:** `savinci-academy` (`pnkxoktjhzjvjarediid`)
-- **Table:** `public.waitlist` (RLS active, verified via live browser submissions)
+- **Table:** `public.waitlist` (Live row inserts verified)
+- **Edge Function:** `send-welcome-email` (v2 deployed, incorporates official logo & WhatsApp community link)
+- **WhatsApp Community:** `https://chat.whatsapp.com/DwUFjABTAPCA9BNmIS5SXc`
 
 ## Activity Log
-### [Waitlist Landing Page Refinement]
-- Updated brand name to **SIRVINCI ACADEMY** with subtle subtag `by Sirvinci Creative Studio` in header and footer.
-- Extracted and cropped clean transparent circular emblem icon (`assets/sirvinci-icon-white.png`).
-- Applied primary Brand Blue (`#2F76FF`) across all CTAs, glowing backdrops, focus rings, radio states, and accents.
-- Centered the "Design Is a Skill. Not a Talent." section and CTA button with an ambient radial blue backdrop.
-- Created Supabase PostgreSQL `public.waitlist` table covering all survey questions and client metadata.
-- Integrated direct REST submission in `main.js` with publishable key and error resilience.
-- Verified in browser with subagent: form submission recorded directly to database table.
-
+### [Logo Alignment & WhatsApp Community Integration]
+- Generated razor-sharp, transparent high-DPI official logo (`assets/sirvinci-academy-logo-official.png`) from user asset with fixed 3.84:1 aspect ratio.
+- Fixed navbar and footer logo styling in `styles.css` and `index.html` to eliminate stretching, distortion, or misalignment across all breakpoints.
+- Styled brand subtag with elegant left-border divider and muted typography.
+- Standardized WhatsApp community link to `https://chat.whatsapp.com/DwUFjABTAPCA9BNmIS5SXc`.
+- Built and styled dedicated WhatsApp Green (`#25D366`) CTA button ("Join the Community Now") in the waitlist post-submission success state.
+- Added WhatsApp community icon to footer social links.
+- Uploaded official logo to public Supabase Storage CDN (`assets/sirvinci-academy-logo-official.png`).
+- Updated and redeployed `send-welcome-email` Edge Function with embedded official logo and clean WhatsApp CTA.
+- Wired automated welcome email dispatch in `main.js` upon waitlist form completion.
+- Verified end-to-end user journey in browser: form submission, database insertion, success card transition, and WhatsApp link destination.

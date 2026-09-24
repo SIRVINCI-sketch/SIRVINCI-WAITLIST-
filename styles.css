@@ -356,6 +356,38 @@ button, input, select {
   display: block;
 }
 
+.brand-logo-official {
+  height: 36px;
+  width: auto;
+  aspect-ratio: 454 / 118;
+  object-fit: contain;
+  image-rendering: -webkit-optimize-contrast;
+  display: block;
+}
+
+.brand-subtag {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .nav-container .brand-subtag {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .brand-logo-official {
+    height: 28px;
+  }
+}
+
 .brand-title-wrap {
   display: flex;
   flex-direction: column;
@@ -1119,6 +1151,62 @@ button, input, select {
   max-width: 480px;
   margin: 0 auto;
   line-height: 1.6;
+}
+
+/* WhatsApp Community CTA in Success State */
+.success-whatsapp-cta {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.whatsapp-prompt {
+  font-size: 0.95rem;
+  color: #E5E5E5;
+  margin: 0;
+  font-weight: 500;
+  text-align: center;
+}
+
+.btn-whatsapp {
+  background-color: #25D366;
+  color: #FFFFFF;
+  border-color: #25D366;
+  box-shadow: 0 4px 20px rgba(37, 211, 102, 0.35);
+  font-weight: 700;
+  gap: 10px;
+  padding: 15px 30px;
+  min-height: 52px;
+  width: 100%;
+  max-width: 380px;
+  text-decoration: none;
+  font-size: 0.95rem;
+  transition: transform var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.btn-whatsapp:hover {
+  background-color: #1EBE5D;
+  border-color: #1EBE5D;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 28px rgba(37, 211, 102, 0.5);
+  color: #FFFFFF;
+}
+
+.btn-whatsapp:active {
+  transform: scale(0.98);
+}
+
+.whatsapp-svg {
+  flex-shrink: 0;
+}
+
+.whatsapp-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 
 /* --- 14. FAQ ACCORDION SECTION --- */

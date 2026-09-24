@@ -258,6 +258,29 @@ function initWaitlistForm() {
         }));
       } catch (storageErr) {}
 
+      // Trigger automated welcome confirmation email via Supabase Edge Function
+      try {
+        fetch(`${SUPABASE_CONFIG.url}/functions/v1/send-welcome-email`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_CONFIG.anonKey,
+            'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            full_name: nameVal,
+            email: emailVal,
+            whatsapp_url: 'https://chat.whatsapp.com/DwUFjABTAPCA9BNmIS5SXc'
+          })
+        }).then(res => res.json()).then(data => {
+          console.log('[Sirvinci Academy] Automated welcome email triggered:', data);
+        }).catch(err => {
+          console.warn('[Sirvinci Academy] Welcome email automation warning:', err);
+        });
+      } catch (emailErr) {
+        console.warn('Welcome email trigger skipped:', emailErr);
+      }
+
       // Smooth transition to inline success screen
       formContentArea.style.display = 'none';
       formSuccess.classList.add('active');
