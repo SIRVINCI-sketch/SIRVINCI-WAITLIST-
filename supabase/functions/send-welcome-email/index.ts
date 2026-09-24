@@ -39,72 +39,110 @@ Deno.serve(async (req: Request) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <title>${emailSubject}</title>
   <style>
-    body { margin: 0; padding: 0; background-color: #0A0A0A; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #F5F5F5; }
-    .wrapper { max-width: 600px; margin: 0 auto; padding: 40px 20px; }
-    .card { background-color: #141414; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 36px 30px; box-shadow: 0 12px 32px rgba(0,0,0,0.5); }
-    .logo-wrap { margin-bottom: 28px; }
-    .title { font-size: 24px; font-weight: 700; line-height: 1.25; margin: 0 0 16px; color: #FFFFFF; }
-    .body-text { font-size: 15px; line-height: 1.6; color: #A3A3A3; margin: 0 0 20px; }
-    .highlight-box { background: rgba(47, 118, 255, 0.08); border-left: 3px solid #2F76FF; padding: 16px 20px; border-radius: 8px; margin: 24px 0; }
-    .highlight-title { font-size: 14px; font-weight: 600; color: #FFFFFF; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.05em; }
-    .highlight-list { margin: 0; padding-left: 20px; color: #D4D4D4; font-size: 14px; line-height: 1.6; }
-    .btn-whatsapp { display: inline-block; background-color: #25D366; color: #FFFFFF; font-weight: 700; font-size: 15px; text-decoration: none; padding: 14px 28px; border-radius: 50px; margin: 12px 0 24px; text-align: center; box-shadow: 0 4px 16px rgba(37, 211, 102, 0.3); }
-    .btn-whatsapp:hover { background-color: #1EBE5D; }
-    .footer { text-align: center; margin-top: 32px; font-size: 12px; color: #737373; line-height: 1.5; }
-    .footer a { color: #A3A3A3; text-decoration: underline; }
+    :root { color-scheme: light dark; supported-color-schemes: light dark; }
+    body { margin: 0; padding: 0; background-color: #0A0A0A; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    @media (prefers-color-scheme: dark) {
+      body { background-color: #0A0A0A !important; }
+      .email-card { background-color: #141414 !important; }
+    }
   </style>
 </head>
-<body>
-  <div class="wrapper">
-    <div class="card">
-      <div class="logo-wrap">
-        <img src="https://pnkxoktjhzjvjarediid.supabase.co/storage/v1/object/public/assets/sirvinci-academy-logo-official.png" alt="Sirvinci Academy" width="180" style="display: block; width: 180px; max-width: 100%; height: auto; border: 0;" />
-      </div>
-      <h1 class="title">You're officially on the waitlist, ${firstName}! 🎉</h1>
-      <p class="body-text">
-        Thank you for taking the leap. You have secured your founding spot for <strong>Sirvinci Academy</strong> — the self-paced masterclass built to teach professional visual design entirely from your smartphone.
-      </p>
-      
-      <div class="highlight-box">
-        <div class="highlight-title">What happens next:</div>
-        <ul class="highlight-list">
-          <li><strong>Founding Member Pricing:</strong> Locked-in lowest price before public launch</li>
-          <li><strong>Curriculum Sneak Peeks:</strong> Real design breakdowns straight to your inbox</li>
-          <li><strong>Early Access:</strong> First access to modules when beta doors open</li>
-        </ul>
-      </div>
+<body style="margin: 0; padding: 0; background-color: #0A0A0A; background-image: linear-gradient(#0A0A0A, #0A0A0A); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #0A0A0A; background-image: linear-gradient(#0A0A0A, #0A0A0A); padding: 32px 16px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card Container -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 580px; background-color: #141414; background-image: linear-gradient(#141414, #141414); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 20px; overflow: hidden; box-shadow: 0 12px 32px rgba(0,0,0,0.5);">
+          <tr>
+            <td style="padding: 36px 32px;">
 
-      <p class="body-text">
-        <strong>Take the next step right now:</strong> Join our private WhatsApp Community to connect with fellow creators, ask questions directly, and catch exclusive announcements:
-      </p>
+              <!-- Sirvinci Academy Resilient Logo (Guaranteed High Contrast in Light & Dark Mode) -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 28px 0;">
+                <tr>
+                  <td>
+                    <img src="https://pnkxoktjhzjvjarediid.supabase.co/storage/v1/object/public/assets/sirvinci-academy-email-logo.png" alt="Sirvinci Academy" width="170" height="51" style="display: block; width: 170px; height: 51px; max-width: 100%; border: 0; outline: none; text-decoration: none;" />
+                  </td>
+                </tr>
+              </table>
 
-      <div style="text-align: center;">
-        <a href="${communityLink}" class="btn-whatsapp" target="_blank" rel="noopener noreferrer">
-          👉 Join the WhatsApp Community Now
-        </a>
-      </div>
+              <!-- Heading -->
+              <h1 style="font-size: 24px; font-weight: 700; line-height: 1.25; margin: 0 0 16px 0; color: #FFFFFF;">
+                You're officially on the waitlist, ${firstName}! 🎉
+              </h1>
 
-      <p class="body-text" style="font-size: 13px; color: #737373; text-align: center; margin-top: 8px;">
-        Direct link: <a href="${communityLink}" style="color: #2F76FF; word-break: break-all;">${communityLink}</a>
-      </p>
+              <!-- Intro Body -->
+              <p style="font-size: 15px; line-height: 1.6; color: #D4D4D4; margin: 0 0 20px 0;">
+                Thank you for taking the leap. You have secured your founding spot for <strong style="color: #FFFFFF;">Sirvinci Academy</strong> — the self-paced masterclass built to teach professional visual design entirely from your smartphone.
+              </p>
 
-      <hr style="border: none; border-top: 1px solid rgba(255, 255, 255, 0.08); margin: 28px 0 20px;">
+              <!-- Highlight Perks Box -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #181F2E; background-image: linear-gradient(#181F2E, #181F2E); border-left: 4px solid #2F76FF; border-radius: 8px; margin: 24px 0;">
+                <tr>
+                  <td style="padding: 18px 20px;">
+                    <div style="font-size: 13px; font-weight: 700; color: #FFFFFF; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+                      What happens next:
+                    </div>
+                    <ul style="margin: 0; padding-left: 20px; color: #E5E5E5; font-size: 14px; line-height: 1.6;">
+                      <li style="margin-bottom: 4px;"><strong style="color: #FFFFFF;">Founding Member Pricing:</strong> Locked-in lowest price before public launch</li>
+                      <li style="margin-bottom: 4px;"><strong style="color: #FFFFFF;">Curriculum Sneak Peeks:</strong> Real design breakdowns straight to your inbox</li>
+                      <li><strong style="color: #FFFFFF;">Early Access:</strong> First access to modules when beta doors open</li>
+                    </ul>
+                  </td>
+                </tr>
+              </table>
 
-      <p class="body-text" style="margin-bottom: 4px; color: #E5E5E5; font-weight: 500;">
-        "Design isn't a talent you're born with. It's a skill taught step by step."
-      </p>
-      <p class="body-text" style="font-size: 13px; color: #737373; margin-top: 0;">
-        — David Ogebe, Founder of Sirvinci Creative Studio
-      </p>
-    </div>
+              <!-- Community Pitch -->
+              <p style="font-size: 15px; line-height: 1.6; color: #D4D4D4; margin: 0 0 20px 0;">
+                <strong style="color: #FFFFFF;">Take the next step right now:</strong> Join our private WhatsApp Community to connect with fellow creators, ask questions directly, and catch exclusive announcements:
+              </p>
 
-    <div class="footer">
-      <p>© 2026 Sirvinci Creative Studio. All rights reserved.<br>
-      Questions? Reach out to <a href="mailto:hello@sirvinci.design">hello@sirvinci.design</a></p>
-    </div>
-  </div>
+              <!-- WhatsApp Button -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 16px 0 24px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="${communityLink}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #25D366; color: #FFFFFF; font-weight: 700; font-size: 15px; text-decoration: none; padding: 14px 28px; border-radius: 50px; text-align: center; box-shadow: 0 4px 16px rgba(37, 211, 102, 0.35);">
+                      👉 Join the WhatsApp Community Now
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Direct Link Fallback -->
+              <p style="font-size: 13px; color: #888888; text-align: center; margin: 0 0 28px 0; word-break: break-all;">
+                Direct link: <a href="${communityLink}" style="color: #2F76FF; text-decoration: underline;">${communityLink}</a>
+              </p>
+
+              <hr style="border: none; border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 28px 0 20px 0;" />
+
+              <!-- Founder Quote -->
+              <p style="font-size: 14px; font-style: italic; color: #F0F0F0; margin: 0 0 6px 0; line-height: 1.5;">
+                "Design isn't a talent you're born with. It's a skill taught step by step."
+              </p>
+              <p style="font-size: 13px; color: #888888; margin: 0;">
+                — David Ogebe, Founder of Sirvinci Creative Studio
+              </p>
+
+            </td>
+          </tr>
+        </table>
+
+        <!-- Email Footer -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 580px; margin-top: 24px;">
+          <tr>
+            <td align="center" style="font-size: 12px; color: #777777; line-height: 1.5;">
+              <p style="margin: 0 0 6px 0;">© 2026 Sirvinci Creative Studio. All rights reserved.</p>
+              <p style="margin: 0;">Questions? Reach out to <a href="mailto:hello@sirvinci.design" style="color: #999999; text-decoration: underline;">hello@sirvinci.design</a></p>
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
     `;
