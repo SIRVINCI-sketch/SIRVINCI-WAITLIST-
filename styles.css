@@ -785,31 +785,45 @@ button, input, select {
   display: grid;
   grid-template-columns: 1fr;
   gap: 40px;
-  align-items: center;
+  align-items: start;
 }
 
 @media (min-width: 860px) {
   .about-grid {
     grid-template-columns: 0.9fr 1.1fr;
     gap: 56px;
+    align-items: center;
   }
+}
+
+.about-image-column {
+  max-width: 440px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .about-image-wrapper {
   position: relative;
-  max-width: 440px;
-  margin: 0 auto;
   width: 100%;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid rgba(47, 118, 255, 0.28);
+  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.75);
 }
 
 .about-img {
   width: 100%;
-  aspect-ratio: 4/5;
+  aspect-ratio: 1 / 1;
   object-fit: cover;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-subtle);
-  position: relative;
-  z-index: 1;
+  display: block;
+  transition: transform 0.4s ease;
+}
+
+.about-image-wrapper:hover .about-img {
+  transform: scale(1.02);
 }
 
 .about-img-glow {
@@ -819,6 +833,77 @@ button, input, select {
   filter: blur(28px);
   z-index: 0;
   pointer-events: none;
+}
+
+/* Image overlay badge matching reference */
+.instructor-image-badge {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  right: 14px;
+  background: rgba(10, 15, 25, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 10px 14px;
+  z-index: 2;
+}
+
+.badge-name {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.badge-role {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--color-accent);
+  margin-top: 3px;
+}
+
+/* Stat Cards below image */
+.instructor-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  width: 100%;
+}
+
+.instructor-stat-card {
+  background: rgba(18, 22, 34, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(47, 118, 255, 0.18);
+  border-radius: 14px;
+  padding: 16px 14px;
+  text-align: center;
+  transition: transform 0.25s ease, border-color 0.25s ease;
+}
+
+.instructor-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(47, 118, 255, 0.4);
+}
+
+.instructor-stat-card .stat-number {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 2.5vw, 2rem);
+  font-weight: 800;
+  color: #38b6ff;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.instructor-stat-card .stat-label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-top: 5px;
+  letter-spacing: 0.02em;
 }
 
 .about-content h2 {
@@ -836,25 +921,45 @@ button, input, select {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 
-.instructor-signature-block {
-  padding-top: 20px;
-  border-top: 1px solid var(--border-subtle);
-}
-
-.signature-title {
-  font-family: var(--font-display);
-  font-size: 1rem;
-  font-weight: 700;
+.about-body strong {
   color: var(--text-primary);
+  font-weight: 600;
 }
 
-.signature-sub {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  margin-top: 2px;
+.about-body em {
+  font-style: normal;
+  color: #ffffff;
+}
+
+/* Skill Tags matching reference */
+.instructor-skill-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.skill-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #38b6ff;
+  background: rgba(47, 118, 255, 0.08);
+  border: 1px solid rgba(47, 118, 255, 0.22);
+  border-radius: 9999px;
+  padding: 6px 14px;
+  letter-spacing: 0.01em;
+  transition: all 0.2s ease;
+}
+
+.skill-tag:hover {
+  background: rgba(47, 118, 255, 0.16);
+  border-color: rgba(47, 118, 255, 0.45);
+  transform: translateY(-1px);
 }
 
 /* --- 13. WAITLIST FORM SECTION (VISUAL CENTERPIECE) --- */

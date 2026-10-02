@@ -125,7 +125,7 @@ Deno.serve(async (req: Request) => {
           <tr>
             <td align="center" style="font-size: 12px; color: #888888; line-height: 1.5;">
               <p style="margin: 0 0 6px 0;">© 2026 Sirvinci Creative Studio. All rights reserved.</p>
-              <p style="margin: 0;">Questions? Reach out to <a href="mailto:hello@sirvinci.design" style="color: #666666; text-decoration: underline;">hello@sirvinci.design</a></p>
+              <p style="margin: 0;">Questions? Reach out to <a href="mailto:hellosirvinci@gmail.com" style="color: #666666; text-decoration: underline;">hellosirvinci@gmail.com</a></p>
             </td>
           </tr>
         </table>

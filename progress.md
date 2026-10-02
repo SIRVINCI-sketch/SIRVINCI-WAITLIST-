@@ -16,9 +16,15 @@
 - Added WhatsApp community icon to footer social links.
 - Uploaded official logo to public Supabase Storage CDN (`assets/sirvinci-academy-logo-official.png`).
 
-### [Live Automated Email Delivery]
-- Configured user's Resend API Key into the production Edge Function (`send-welcome-email` v3).
-- Embedded high-resolution Sirvinci Academy logo header, personalized welcome, and direct WhatsApp button in the email template.
-- Deployed Edge Function v3 to Supabase project `savinci-academy` (`pnkxoktjhzjvjarediid`).
-- Successfully executed live test email delivery directly to `vinciogebe@gmail.com` (`id: 01a0d120-2e85-7075-8b5f-bb9901fe192a`).
-- Verified automatic dispatch on waitlist registration from `main.js`.
+### [Meet Your Instructor Redesign & Contact Links Update]
+- Updated founder & lead instructor portrait to the newly provided high-resolution portrait (`assets/instructor.jpg` & `assets/instructor.png`).
+- Redesigned Instructor Section into a premium "Meet Your Instructor" showcase matching reference design:
+  - Added glassmorphic image overlay badge: "David Ogebe (Sirvinci) — Founder & Lead Instructor, Sirvinci Academy".
+  - Added dual stat cards: `7+ Years Experience` and `200+ Businesses Served`.
+  - Expanded biographical narrative grounded in David Ogebe's proven portfolio (SAWA Wallet, KILO Logistics, 200+ clients, 100+ mentored designers).
+  - Added specialty skill tags: `Product Designer`, `Brand Strategist`, `Founder`, `UI/UX Designer`, `Art Director`, `Design Mentor`.
+- Streamlined footer social media links: removed TikTok and YouTube, preserved only WhatsApp (`https://wa.link/98bbiy`) and Instagram (`https://www.instagram.com/sirvinciacademy?stkn=aDc3d2oweXRjNXdn&utm_source=qr`).
+- Updated primary contact and support email to `hellosirvinci@gmail.com` across `index.html` and the automated welcome email template.
+- Redeployed production Supabase Edge Function `send-welcome-email` (v6) with updated contact email.
+- Verified desktop and mobile responsiveness via browser visual inspection.
+
