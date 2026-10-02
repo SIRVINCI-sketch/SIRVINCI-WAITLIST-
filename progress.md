@@ -28,3 +28,9 @@
 - Redeployed production Supabase Edge Function `send-welcome-email` (v6) with updated contact email.
 - Verified desktop and mobile responsiveness via browser visual inspection.
 
+### [Portrait Lighting Polish & Title Refinement]
+- Removed artificial blue radial gradient glow (`about-img-glow`) from the instructor image, restoring the clean studio portrait with its pure white background and warm natural tones.
+- Preserved the smooth interactive scale-zoom hover effect on the photo card.
+- Updated instructor title badge to: **"Founder, Sirvinci Creative Studio & Lead Instructor"** — establishing parent brand authority while highlighting lead course leadership.
+
+

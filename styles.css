@@ -810,7 +810,7 @@ button, input, select {
   width: 100%;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  border: 1px solid rgba(47, 118, 255, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.75);
 }
 
@@ -824,15 +824,6 @@ button, input, select {
 
 .about-image-wrapper:hover .about-img {
   transform: scale(1.02);
-}
-
-.about-img-glow {
-  position: absolute;
-  inset: -15px;
-  background: radial-gradient(circle, var(--color-accent-glow) 0%, transparent 70%);
-  filter: blur(28px);
-  z-index: 0;
-  pointer-events: none;
 }
 
 /* Image overlay badge matching reference */
