@@ -334,8 +334,8 @@
                 <label for="full-name" class="form-label">
                   Full Name <span class="required-star">*</span>
                 </label>
-                <input type="text" id="full-name" name="full_name" class="form-input" placeholder="e.g. Alex Morgan" autocomplete="name" required>
-                <span class="field-error-msg">Please enter your full name.</span>
+                <input type="text" id="full-name" name="full_name" class="form-input" placeholder="e.g. Alex Morgan" autocomplete="name" aria-invalid="false" aria-describedby="full-name-error" maxlength="120" required>
+                <span id="full-name-error" class="field-error-msg">Please enter your full name.</span>
               </div>
 
               <!-- Field 2: Email Address -->
@@ -343,18 +343,18 @@
                 <label for="email" class="form-label">
                   Email Address <span class="required-star">*</span>
                 </label>
-                <input type="email" id="email" name="email" class="form-input" placeholder="alex@example.com" autocomplete="email" required>
-                <span class="field-error-msg">Please enter a valid email address.</span>
+                <input type="email" id="email" name="email" class="form-input" placeholder="alex@example.com" autocomplete="email" aria-invalid="false" aria-describedby="email-error" maxlength="254" required>
+                <span id="email-error" class="field-error-msg">Please enter a valid email address.</span>
               </div>
 
               <!-- Field 3: Canva Experience Radio -->
               <div class="form-group" id="group-experience">
                 <label class="form-label">
-                  Have you used Canva or done design before? <span class="required-star">*</span>
+                  Have you used Canva or done design before?
                 </label>
                 <div class="radio-stack">
                   <label class="radio-card">
-                    <input type="radio" name="canva_experience" value="Never used it" required checked>
+                    <input type="radio" name="canva_experience" value="Never used it" checked>
                     <span class="radio-custom"></span>
                     <span class="radio-text">Never used it</span>
                   </label>
@@ -374,10 +374,10 @@
               <!-- Field 4: Main Goal Dropdown -->
               <div class="form-group" id="group-main-goal">
                 <label for="main-goal" class="form-label">
-                  What's your main goal with design? <span class="required-star">*</span>
+                  What's your main goal with design?
                 </label>
                 <div class="select-wrapper">
-                  <select id="main-goal" name="main_goal" class="form-select" required>
+                  <select id="main-goal" name="main_goal" class="form-select" aria-invalid="false" aria-describedby="main-goal-error">
                     <option value="" disabled selected>Select your primary goal...</option>
                     <option value="Freelancing or making money">Freelancing or making money</option>
                     <option value="Growing my personal brand or business">Growing my personal brand or business</option>
@@ -388,7 +388,7 @@
                     <polyline points="6 9 12 15 18 9"></polyline>
                   </svg>
                 </div>
-                <span class="field-error-msg">Please select your primary goal.</span>
+                <span id="main-goal-error" class="field-error-msg">Please select your primary goal.</span>
               </div>
 
               <!-- Field 5: What's stopped you -->
@@ -438,14 +438,14 @@
               <!-- Field 7: Expected Cost (Compulsory) -->
               <div class="form-group" id="group-cost">
                 <label for="expected-cost" class="form-label">
-                  What would you expect a course like this to cost? <span class="required-star">*</span>
+                  What would you expect a course like this to cost?
                 </label>
-                <input type="text" id="expected-cost" name="expected_cost" class="form-input" placeholder="e.g. ₦50,000 / $50" required>
-                <span class="field-error-msg">Please enter what you would expect this course to cost.</span>
+                <input type="text" id="expected-cost" name="expected_cost" class="form-input" placeholder="e.g. ₦50,000 / $50" aria-invalid="false" aria-describedby="expected-cost-error" maxlength="120">
+                <span id="expected-cost-error" class="field-error-msg">Please enter what you would expect this course to cost.</span>
               </div>
 
               <!-- Submission Alert Banner (For errors/offline) -->
-              <div id="form-error-banner" style="display:none;margin-bottom:18px;padding:12px 16px;background:rgba(255,94,94,0.12);border:1px solid rgba(255,94,94,0.3);border-radius:10px;color:#FF7B7B;font-size:0.9rem;text-align:center;">
+              <div id="form-error-banner" role="alert" aria-live="assertive" style="display:none;margin-bottom:18px;padding:12px 16px;background:rgba(255,94,94,0.12);border:1px solid rgba(255,94,94,0.3);border-radius:10px;color:#FF7B7B;font-size:0.9rem;text-align:center;">
               </div>
 
               <!-- Submit Button -->

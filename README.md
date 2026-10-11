@@ -36,6 +36,13 @@ Then visit **`http://localhost:3030/`** in your browser.
 
 ---
 
+## 🌐 Vercel Production URLs
+The GitHub production deployment records identify these working Vercel aliases:
+- https://sirvinciacademy-waitlist.vercel.app/
+- https://sirvinci-waitlist.vercel.app/
+
+The URL `https://sirvinci-academy.vercel.app/` is not an alias for either recorded Vercel project and returns `DEPLOYMENT_NOT_FOUND`.
+
 ## ☁️ Supabase Integration
 Form submissions post directly to the Supabase REST endpoint:
 - **Table**: `public.waitlist`
@@ -43,12 +50,17 @@ Form submissions post directly to the Supabase REST endpoint:
   - `full_name` (Text, required)
   - `email` (Text, required)
   - `canva_experience` (Text)
-  - `main_goal` (Text, required)
+  - `main_goal` (Text, optional)
   - `stopped_reason` (Text)
   - `payment_pref` (Text)
-  - `expected_cost` (Text, required)
-  - `user_agent` (Text)
+  - `expected_cost` (Text, optional)
   - `status` (Text, default: `pending`)
+
+New registrations atomically create a private email outbox job through a database trigger. The Edge Function sends using the `RESEND_API_KEY` and `RESEND_FROM_EMAIL` secrets; the database outbox tracks accepted, retryable, blocked, failed, and uncertain outcomes. The scheduled worker runs every five minutes and only includes blocked jobs in recovery after Resend reports the configured sender domain as verified. Recovery requests are authenticated with `EMAIL_RECOVERY_SECRET`, mirrored in Supabase Vault for the scheduled job.
+
+Apply the migrations in `supabase/migrations/` to a linked Supabase project. Run isolated logic tests with `node --test tests/waitlist-flow.test.js`; run the rollback-only live schema/queue integration test with `npx supabase db query --linked --file tests/waitlist-recovery.integration.sql`.
+
+The recovery outbox deliberately does not backfill existing registrations: their historic email-delivery status is unknown, and automatically resending to all of them could duplicate confirmations. A duplicate submission for a legacy registration without an outbox record is marked uncertain and is not automatically resent. Verify the Resend sender domain and perform a controlled external-recipient test before public launch.
 
 ---
 

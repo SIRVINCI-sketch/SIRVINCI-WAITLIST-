@@ -8,13 +8,129 @@ const SUPABASE_CONFIG = {
   anonKey: 'sb_publishable_ORhuj4o-S8_Fw8BJPmbfAg_yG7hFqky'
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-  initNavbarScroll();
-  initScrollAnimations();
-  initFaqAccordion();
-  initWaitlistForm();
-  initSmoothScroll();
-});
+const WAITLIST_UTILS = {
+  emailRegex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+  normalizeEmail(value) {
+    if (typeof value !== 'string') return '';
+    return value.trim().toLowerCase();
+  },
+  normalizeFullName(value) {
+    if (typeof value !== 'string') return '';
+    return value.replace(/\s+/g, ' ').trim();
+  },
+  isValidEmail(value) {
+    const normalizedEmail = WAITLIST_UTILS.normalizeEmail(value);
+    return typeof normalizedEmail === 'string' && WAITLIST_UTILS.emailRegex.test(normalizedEmail);
+  },
+  validateRequiredFields({ fullName, email }) {
+    const errors = {};
+    const trimmedFullName = WAITLIST_UTILS.normalizeFullName(fullName);
+    const trimmedEmail = WAITLIST_UTILS.normalizeEmail(email);
+
+    if (!trimmedFullName) {
+      errors.fullName = 'Please enter your full name.';
+    }
+
+    if (!trimmedEmail || !WAITLIST_UTILS.isValidEmail(trimmedEmail)) {
+      errors.email = 'Please enter a valid email address.';
+    }
+
+    return errors;
+  },
+  parseJsonMaybe(value) {
+    if (typeof value !== 'string' || !value.trim()) return null;
+
+    try {
+      return JSON.parse(value);
+    } catch (error) {
+      return null;
+    }
+  },
+  buildPayload(formData, nameVal, emailVal) {
+    const payload = {
+      full_name: WAITLIST_UTILS.normalizeFullName(nameVal),
+      email: WAITLIST_UTILS.normalizeEmail(emailVal)
+    };
+
+    ['canva_experience', 'main_goal', 'stopped_reason', 'payment_pref', 'expected_cost'].forEach((field) => {
+      const value = (formData.get(field) || '').toString().trim();
+      if (value) payload[field] = value;
+    });
+
+    return payload;
+  },
+  isDuplicateRegistrationError(response, data) {
+    const candidate = data && typeof data === 'object' ? data : {};
+    const messageText = [
+      candidate.message,
+      candidate.error,
+      candidate.details,
+      candidate.hint
+    ].filter((value) => typeof value === 'string').join(' ').toLowerCase();
+
+    if (response && response.status === 409) return true;
+    if (messageText.includes('duplicate') || messageText.includes('already registered') || messageText.includes('unique constraint') || messageText.includes('already on the list')) {
+      return true;
+    }
+
+    return false;
+  },
+  getEmailLifecycleStatus(response, data) {
+    if (!response || typeof response !== 'object') return 'unknown';
+    if (data && typeof data === 'object') {
+      const normalizedStatus = String(data.status || data.state || data.result || '').toLowerCase();
+      const errorCategory = String(data.error_category || '').toLowerCase();
+
+      if (normalizedStatus === 'duplicate') return 'duplicate';
+      if (normalizedStatus === 'blocked' || errorCategory === 'configuration_blocked') return 'blocked';
+      if (normalizedStatus === 'retryable' || data.retryable === true) return 'retryable';
+      if (normalizedStatus === 'uncertain' || errorCategory === 'delivery_uncertain') return 'uncertain';
+      if (normalizedStatus === 'failed') return 'error';
+      if (normalizedStatus === 'pending' || normalizedStatus === 'processing' || normalizedStatus === 'queued') return 'pending';
+      if (response.ok === true && (normalizedStatus === 'accepted' || normalizedStatus === 'sent' || data.ok === true || data.success === true)) return 'accepted';
+    }
+
+    if (response.ok === true) return 'accepted';
+    return 'error';
+  },
+  isEmailSendSuccess(response, data) {
+    if (!response || response.ok !== true) return false;
+    if (!data || typeof data !== 'object') return false;
+
+    const status = String(data.status || '').toLowerCase();
+    if (status) return status === 'accepted' || status === 'sent';
+
+    return data.ok === true ||
+      data.success === true ||
+      data.delivered === true;
+  },
+  getEmailOutcomeMessage(status) {
+    const messages = {
+      accepted: 'Your registration is saved, and the confirmation email has been accepted for delivery.',
+      pending: 'Your registration is saved, and the confirmation email is queued or being processed.',
+      retryable: 'Your registration is saved, and we will retry the confirmation email automatically.',
+      blocked: 'Your registration is saved, and the email is queued for recovery once the sender configuration is corrected.',
+      uncertain: 'Your registration is saved, but confirmation delivery could not be verified. Please do not register again; recovery will use the same safe delivery key.',
+      error: 'Your registration is saved, but the confirmation email could not be sent. Please do not register again.'
+    };
+    return messages[status] || messages.error;
+  },
+  getSafeErrorMessage(error, fallback) {
+    if (typeof error === 'string' && error.trim()) return error.trim();
+    if (error && typeof error.message === 'string' && error.message.trim()) return error.message.trim();
+    return fallback;
+  }
+};
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    initNavbarScroll();
+    initScrollAnimations();
+    initFaqAccordion();
+    initWaitlistForm();
+    initSmoothScroll();
+  });
+}
 
 /* --- 1. Navbar Scroll State --- */
 function initNavbarScroll() {
@@ -128,22 +244,68 @@ function initWaitlistForm() {
   const emailInput = document.getElementById('email');
   const mainGoalSelect = document.getElementById('main-goal');
   const expectedCostInput = document.getElementById('expected-cost');
+  let isSubmitting = false;
 
-  // Helpers for validation UI
+  const updateFieldAccessibility = (inputEl, isInvalid) => {
+    if (!inputEl) return;
+    inputEl.setAttribute('aria-invalid', String(isInvalid));
+
+    if (isInvalid) {
+      const errorId = inputEl.getAttribute('aria-describedby');
+      if (errorId) {
+        inputEl.setAttribute('aria-describedby', errorId);
+      }
+    } else {
+      inputEl.removeAttribute('aria-describedby');
+    }
+  };
+
   const clearError = (inputEl) => {
     if (!inputEl) return;
     const group = inputEl.closest('.form-group');
     if (group) group.classList.remove('has-error');
+    updateFieldAccessibility(inputEl, false);
     if (errorBanner) errorBanner.style.display = 'none';
   };
 
-  const setError = (inputEl) => {
+  const setError = (inputEl, errorMessageId) => {
     if (!inputEl) return;
     const group = inputEl.closest('.form-group');
     if (group) group.classList.add('has-error');
+    if (errorMessageId) {
+      inputEl.setAttribute('aria-describedby', errorMessageId);
+    }
+    inputEl.setAttribute('aria-invalid', 'true');
   };
 
-  // Real-time error clearing
+  const showRegistrationSavedButEmailFailed = (messageOverride) => {
+    if (!formSuccess) return;
+    const title = formSuccess.querySelector('.success-title');
+    const body = formSuccess.querySelector('.success-body');
+
+    if (title) {
+      title.textContent = 'Registration saved';
+    }
+
+    if (body) {
+      body.textContent = messageOverride || 'Your waitlist registration was saved, but we could not send the confirmation email. Your registration is still recorded.';
+    }
+
+    formContentArea.style.display = 'none';
+    formSuccess.classList.add('active');
+
+    if (formCard) {
+      formCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  const showRegistrationError = (message) => {
+    if (errorBanner) {
+      errorBanner.textContent = message;
+      errorBanner.style.display = 'block';
+    }
+  };
+
   [fullNameInput, emailInput, mainGoalSelect, expectedCostInput].forEach(input => {
     if (!input) return;
     input.addEventListener('input', () => clearError(input));
@@ -152,67 +314,46 @@ function initWaitlistForm() {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    let hasError = false;
 
-    // 1. Validate Full Name
-    const nameVal = fullNameInput ? fullNameInput.value.trim() : '';
-    if (!nameVal) {
-      setError(fullNameInput);
-      hasError = true;
-    } else {
+    if (isSubmitting) return;
+
+    const nameVal = fullNameInput ? WAITLIST_UTILS.normalizeFullName(fullNameInput.value) : '';
+    const emailVal = emailInput ? WAITLIST_UTILS.normalizeEmail(emailInput.value) : '';
+    const validationErrors = WAITLIST_UTILS.validateRequiredFields({ fullName: nameVal, email: emailVal });
+
+    if (validationErrors.fullName) {
+      setError(fullNameInput, 'full-name-error');
+    } else if (fullNameInput) {
       clearError(fullNameInput);
     }
 
-    // 2. Validate Email Address
-    const emailVal = emailInput ? emailInput.value.trim() : '';
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailVal || !emailRegex.test(emailVal)) {
-      setError(emailInput);
-      hasError = true;
-    } else {
+    if (validationErrors.email) {
+      setError(emailInput, 'email-error');
+    } else if (emailInput) {
       clearError(emailInput);
     }
 
-    // 3. Validate Main Goal Select
-    if (mainGoalSelect && !mainGoalSelect.value) {
-      setError(mainGoalSelect);
-      hasError = true;
-    } else if (mainGoalSelect) {
+    if (mainGoalSelect) {
       clearError(mainGoalSelect);
+      mainGoalSelect.setAttribute('aria-invalid', 'false');
     }
 
-    // 4. Validate Expected Cost (Compulsory)
-    const costVal = expectedCostInput ? expectedCostInput.value.trim() : '';
-    if (!costVal) {
-      setError(expectedCostInput);
-      hasError = true;
-    } else if (expectedCostInput) {
+    if (expectedCostInput) {
       clearError(expectedCostInput);
+      expectedCostInput.setAttribute('aria-invalid', 'false');
     }
 
-    // Focus first invalid field
-    if (hasError) {
+    if (validationErrors.fullName || validationErrors.email) {
       const firstInvalid = form.querySelector('.form-group.has-error input, .form-group.has-error select');
       if (firstInvalid) firstInvalid.focus();
       return;
     }
 
-    // Assemble payload matching Supabase public.waitlist table
     const formData = new FormData(form);
-    const payload = {
-      full_name: nameVal,
-      email: emailVal,
-      canva_experience: formData.get('canva_experience') || '',
-      main_goal: formData.get('main_goal') || '',
-      stopped_reason: formData.get('stopped_reason') || '',
-      payment_pref: formData.get('payment_pref') || '',
-      expected_cost: (formData.get('expected_cost') || '').trim(),
-      user_agent: navigator.userAgent || 'Web Client',
-      status: 'pending'
-    };
+    const payload = WAITLIST_UTILS.buildPayload(formData, nameVal, emailVal);
 
-    // Button loading state
     const originalBtnHtml = submitBtn.innerHTML;
+    isSubmitting = true;
     submitBtn.disabled = true;
     submitBtn.innerHTML = `
       <span style="display:inline-flex;align-items:center;gap:10px;">
@@ -231,8 +372,7 @@ function initWaitlistForm() {
     `;
 
     try {
-      // Direct REST API Post to Supabase with Publishable API Key
-      const response = await fetch(`${SUPABASE_CONFIG.url}/rest/v1/waitlist`, {
+      const registrationResponse = await fetch(`${SUPABASE_CONFIG.url}/rest/v1/waitlist`, {
         method: 'POST',
         headers: {
           'apikey': SUPABASE_CONFIG.anonKey,
@@ -243,24 +383,60 @@ function initWaitlistForm() {
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.warn('Supabase response issue:', response.status, errorText);
-        // If not successful HTTP status, still proceed if local record kept
-        throw new Error(`Server returned ${response.status}`);
+      const registrationText = await registrationResponse.text();
+      const registrationData = WAITLIST_UTILS.parseJsonMaybe(registrationText);
+
+      if (!registrationResponse.ok) {
+        const isDuplicate = WAITLIST_UTILS.isDuplicateRegistrationError(registrationResponse, registrationData);
+
+        if (isDuplicate) {
+          let duplicateMessage = 'This email is already on the waitlist. Your existing registration is saved; its confirmation-email status could not be checked. Please do not register again.';
+          try {
+            const emailStatusResponse = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/send-welcome-email`, {
+              method: 'POST',
+              headers: {
+                'apikey': SUPABASE_CONFIG.anonKey,
+                'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ email: emailVal })
+            });
+            const emailStatus = WAITLIST_UTILS.parseJsonMaybe(await emailStatusResponse.text());
+            const lifecycle = WAITLIST_UTILS.getEmailLifecycleStatus(emailStatusResponse, emailStatus);
+
+            if (lifecycle === 'accepted') {
+              duplicateMessage = 'This email is already on the waitlist, and the confirmation email has been accepted for delivery. You do not need to register again.';
+            } else if (lifecycle === 'pending') {
+              duplicateMessage = 'This email is already on the waitlist. Your confirmation email is queued or being processed; you do not need to register again.';
+            } else if (lifecycle === 'blocked') {
+              duplicateMessage = 'This email is already on the waitlist. The confirmation email is saved for recovery after sender configuration is corrected.';
+            } else if (lifecycle === 'retryable') {
+              duplicateMessage = 'This email is already on the waitlist. The confirmation email will be retried automatically.';
+            } else if (lifecycle === 'uncertain') {
+              duplicateMessage = 'This email is already on the waitlist, but confirmation delivery could not be verified. Please do not register again.';
+            } else if (lifecycle === 'error') {
+              duplicateMessage = 'This email is already on the waitlist. Your registration remains saved, but confirmation delivery is not currently available.';
+            }
+          } catch (emailStatusError) {
+            console.warn('[Sirvinci Academy] Could not check duplicate registration email status:', emailStatusError);
+          }
+
+          showRegistrationError(duplicateMessage);
+          formContentArea.style.display = 'block';
+          if (formSuccess) formSuccess.classList.remove('active');
+          return;
+        }
+
+        const message = registrationData && (registrationData.message || registrationData.error)
+          ? registrationData.message || registrationData.error
+          : `Registration failed (${registrationResponse.status}).`;
+        throw new Error(message);
       }
 
-      // Save registration state locally as backup
+      let emailResponse;
+      let emailData;
       try {
-        localStorage.setItem('savinci_academy_registered', JSON.stringify({
-          email: emailVal,
-          timestamp: new Date().toISOString()
-        }));
-      } catch (storageErr) {}
-
-      // Trigger automated welcome confirmation email via Supabase Edge Function
-      try {
-        fetch(`${SUPABASE_CONFIG.url}/functions/v1/send-welcome-email`, {
+        emailResponse = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/send-welcome-email`, {
           method: 'POST',
           headers: {
             'apikey': SUPABASE_CONFIG.anonKey,
@@ -272,48 +448,74 @@ function initWaitlistForm() {
             email: emailVal,
             whatsapp_url: 'https://chat.whatsapp.com/DwUFjABTAPCA9BNmIS5SXc'
           })
-        }).then(res => res.json()).then(data => {
-          console.log('[Sirvinci Academy] Automated welcome email triggered:', data);
-        }).catch(err => {
-          console.warn('[Sirvinci Academy] Welcome email automation warning:', err);
         });
+        emailData = WAITLIST_UTILS.parseJsonMaybe(await emailResponse.text());
       } catch (emailErr) {
-        console.warn('Welcome email trigger skipped:', emailErr);
+        console.warn('[Sirvinci Academy] Email processing response was unavailable after registration saved:', emailErr);
+        showRegistrationSavedButEmailFailed(WAITLIST_UTILS.getEmailOutcomeMessage('uncertain'));
+        return;
       }
 
-      // Smooth transition to inline success screen
+      const emailOutcome = WAITLIST_UTILS.getEmailLifecycleStatus(emailResponse, emailData);
+      const emailWasSent = WAITLIST_UTILS.isEmailSendSuccess(emailResponse, emailData);
+
+      if (!emailWasSent) {
+        const emailMessage = emailData && (emailData.error || emailData.message)
+          ? emailData.error || emailData.message
+          : `Your waitlist registration was saved, but the confirmation email could not be sent (${emailResponse.status || 'unknown provider error'}).`;
+
+        console.warn('[Sirvinci Academy] Email send failed after registration saved:', emailMessage);
+
+        showRegistrationSavedButEmailFailed(emailOutcome === 'error'
+          ? emailMessage
+          : WAITLIST_UTILS.getEmailOutcomeMessage(emailOutcome));
+        return;
+      }
+
       formContentArea.style.display = 'none';
+      const successTitle = formSuccess.querySelector('.success-title');
+      const successBody = formSuccess.querySelector('.success-body');
+      if (successTitle) successTitle.textContent = 'You’re on the list!';
+      if (successBody) {
+        successBody.textContent = 'Your registration is saved, and the confirmation email has been accepted for delivery. We’ll be in touch soon with updates, free previews, and founding member pricing.';
+      }
       formSuccess.classList.add('active');
 
       if (formCard) {
         formCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
-
     } catch (err) {
       console.error('Waitlist submission notice:', err);
+      showRegistrationError(WAITLIST_UTILS.getSafeErrorMessage(err, 'We could not save your waitlist registration. Please try again.'));
+      formContentArea.style.display = 'block';
 
-      // Graceful fallback: If network glitch, store locally and show success
-      try {
-        const pendingQueue = JSON.parse(localStorage.getItem('savinci_pending_waitlist') || '[]');
-        pendingQueue.push({ ...payload, queued_at: new Date().toISOString() });
-        localStorage.setItem('savinci_pending_waitlist', JSON.stringify(pendingQueue));
-      } catch (e) {}
-
-      // Transition to success screen so user is acknowledged
-      formContentArea.style.display = 'none';
-      formSuccess.classList.add('active');
-
-      if (formCard) {
-        formCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (formSuccess) {
+        formSuccess.classList.remove('active');
       }
     } finally {
+      isSubmitting = false;
       submitBtn.disabled = false;
       submitBtn.innerHTML = originalBtnHtml;
     }
   });
 }
 
-// Global keyframe for inline spinner
-const spinnerStyle = document.createElement('style');
-spinnerStyle.textContent = `@keyframes spin { 100% { transform: rotate(360deg); } }`;
-document.head.appendChild(spinnerStyle);
+if (typeof document !== 'undefined') {
+  const spinnerStyle = document.createElement('style');
+  spinnerStyle.textContent = `@keyframes spin { 100% { transform: rotate(360deg); } }`;
+  document.head.appendChild(spinnerStyle);
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    WAITLIST_UTILS,
+    buildWaitlistPayload: WAITLIST_UTILS.buildPayload,
+    isValidEmail: WAITLIST_UTILS.isValidEmail,
+    parseJsonMaybe: WAITLIST_UTILS.parseJsonMaybe,
+    isEmailSendSuccess: WAITLIST_UTILS.isEmailSendSuccess,
+    getEmailLifecycleStatus: WAITLIST_UTILS.getEmailLifecycleStatus,
+    getSafeErrorMessage: WAITLIST_UTILS.getSafeErrorMessage,
+    normalizeEmail: WAITLIST_UTILS.normalizeEmail,
+    isDuplicateRegistrationError: WAITLIST_UTILS.isDuplicateRegistrationError
+  };
+}

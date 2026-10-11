@@ -1,177 +1,241 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+declare const Deno: {
+  env: {
+    get(name: string): string | undefined;
+  };
+  serve: (handler: (req: Request) => Response | Promise<Response>) => void;
 };
+
+import "./recovery-core.js";
+
+const allowedOrigins = new Set([
+  "http://127.0.0.1:5500",
+  "http://localhost:3030",
+  "http://127.0.0.1:3030",
+  "http://localhost:5500",
+  "https://sirvinciacademy.com",
+  "https://www.sirvinciacademy.com",
+  "https://sirvinciacademy-waitlist.vercel.app",
+  "https://sirvinci-waitlist.vercel.app",
+]);
 
 interface EmailRequest {
   full_name?: string;
   email: string;
   whatsapp_url?: string;
+  action?: string;
+  batch_size?: number;
+  job_ids?: string[];
+  include_blocked?: boolean;
+}
+
+interface EmailJob {
+  job_id: string;
+  status: string;
+  email: string;
+  full_name: string;
+  attempt_count: number;
+  idempotency_key: string;
+  created_at: string;
+  next_attempt_at?: string | null;
+}
+
+interface JobResult {
+  status: string;
+  error_category?: string | null;
+  provider_status?: number;
+}
+
+interface RecoveryCore {
+  classifyProviderStatus(status: number): string;
+  retryDelaySeconds(attemptCount: number): number;
+  constantTimeEquals(left: string, right: string): boolean;
+  isSenderConfigurationValid(apiKey: string, fromEmail: string): boolean;
+  isSenderDomainVerified(apiKey: string, fromEmail: string, fetchImpl: typeof fetch): Promise<boolean>;
+  getCorsHeaders(origin: string | null | undefined, allowedOrigins: Set<string>): Record<string, string>;
+  isWithinIdempotencyWindow(createdAt: string): boolean;
+  sendClaimedJob(job: EmailJob, options: Record<string, unknown>): Promise<JobResult>;
+}
+
+declare const WAITLIST_EMAIL_CORE: RecoveryCore;
+
+const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://pnkxoktjhzjvjarediid.supabase.co";
+
+async function callServiceRpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!serviceRoleKey) throw new Error("Email queue database configuration is missing.");
+  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${name}`, {
+    method: "POST",
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(args),
+  });
+  if (!response.ok) throw new Error(`Email queue operation failed (${response.status}).`);
+  return await response.json() as T;
+}
+
+async function finishJob(jobId: string, result: Record<string, unknown>): Promise<string> {
+  return await callServiceRpc<string>("complete_waitlist_email_job", {
+    p_job_id: jobId,
+    p_outcome: result.outcome,
+    p_provider_message_id: result.providerMessageId ?? null,
+    p_error_category: result.errorCategory ?? null,
+    p_error_message: result.errorMessage ?? null,
+    p_retry_after_seconds: result.retryAfterSeconds ?? null,
+  });
+}
+
+async function processJobs(jobs: EmailJob[]) {
+  const apiKey = Deno.env.get("RESEND_API_KEY")?.trim() || "";
+  const fromEmail = Deno.env.get("RESEND_FROM_EMAIL")?.trim() || "";
+  const results: Array<{ job_id: string; status: string; error_category?: string | null }> = [];
+
+  for (const job of jobs) {
+    try {
+      const result = await WAITLIST_EMAIL_CORE.sendClaimedJob(job, {
+        apiKey,
+        fromEmail,
+        fetchImpl: fetch,
+        finishJob,
+      });
+      results.push({ job_id: job.job_id, ...result });
+    } catch (error) {
+      console.error("[Email Recovery] Job processing failed:", job.job_id, error instanceof Error ? error.message : "unknown error");
+      const status = await finishJob(job.job_id, {
+        outcome: WAITLIST_EMAIL_CORE.isWithinIdempotencyWindow(job.created_at) ? "retryable" : "uncertain",
+        errorCategory: "worker_error",
+        errorMessage: "Email recovery worker could not finish processing this job.",
+        retryAfterSeconds: WAITLIST_EMAIL_CORE.retryDelaySeconds(job.attempt_count),
+      });
+      results.push({ job_id: job.job_id, status, error_category: status === "uncertain" ? "delivery_uncertain" : "temporary_provider_error" });
+    }
+  }
+  return results;
+}
+
+async function queueEmail(email: string, fullName: string | undefined) {
+  const jobs = await callServiceRpc<EmailJob[]>("enqueue_waitlist_email", { p_email: email });
+  const job = jobs[0];
+  if (!job) throw new Error("No durable email job could be created.");
+  if (job.status === "accepted") return { ok: true, status: "accepted", job_id: job.job_id };
+  if (job.status === "processing") return { ok: true, status: "pending", job_id: job.job_id };
+  if (job.status === "blocked") return { ok: true, status: "blocked", error_category: "configuration_blocked", job_id: job.job_id };
+  if (job.status === "uncertain") return { ok: true, status: "uncertain", error_category: "delivery_uncertain", job_id: job.job_id };
+  if (job.status === "failed") return { ok: false, status: "failed", error_category: "provider_rejected", job_id: job.job_id };
+
+  const claimed = await callServiceRpc<EmailJob[]>("claim_waitlist_email_jobs", {
+    p_job_ids: [job.job_id],
+    p_include_blocked: false,
+    p_batch_size: 1,
+  });
+  if (!claimed.length) {
+    const waitingStatus = job.status === "retryable" ? "retryable" : "pending";
+    return { ok: true, status: waitingStatus, job_id: job.job_id };
+  }
+  const [result] = await processJobs(claimed);
+  return { ok: true, ...result, job_id: job.job_id };
+}
+
+async function isConfiguredSenderDomainVerified(apiKey: string, fromEmail: string): Promise<boolean> {
+  return await WAITLIST_EMAIL_CORE.isSenderDomainVerified(apiKey, fromEmail, fetch);
+}
+
+function getCorsHeaders(origin?: string | null) {
+  return WAITLIST_EMAIL_CORE.getCorsHeaders(origin, allowedOrigins);
+}
+
+function buildSafeErrorResponse(status: number, error: string, origin?: string | null, providerStatus?: number) {
+  const headers = getCorsHeaders(origin);
+
+  return new Response(
+    JSON.stringify({
+      ok: false,
+      status: "error",
+      error,
+      provider_status: providerStatus ?? null,
+    }),
+    {
+      status,
+      headers,
+    }
+  );
+}
+
+function buildSuccessResponse(body: Record<string, unknown>, origin?: string | null) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: getCorsHeaders(origin),
+  });
 }
 
 Deno.serve(async (req: Request) => {
-  // Handle CORS preflight requests
+  const origin = req.headers.get("Origin");
+
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", {
+      status: 200,
+      headers: getCorsHeaders(origin),
+    });
+  }
+
+  if (req.method !== "POST") {
+    return buildSafeErrorResponse(405, "Method not allowed", origin);
   }
 
   try {
-    const { full_name, email, whatsapp_url }: EmailRequest = await req.json();
+    const body = (await req.json()) as Partial<EmailRequest>;
+    const { full_name, email, whatsapp_url } = body;
 
-    if (!email) {
-      return new Response(
-        JSON.stringify({ error: "Email is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    const recoverySecret = Deno.env.get("EMAIL_RECOVERY_SECRET")?.trim() || "";
+    const suppliedRecoverySecret = req.headers.get("x-email-recovery-secret") || "";
+    const isRecoveryRequest = recoverySecret.length > 0 && WAITLIST_EMAIL_CORE.constantTimeEquals(suppliedRecoverySecret, recoverySecret);
+    if (body.action) {
+      if (!isRecoveryRequest) return buildSafeErrorResponse(401, "Unauthorized", origin);
+      if (body.action !== "process_due" && body.action !== "recover_blocked") {
+        return buildSafeErrorResponse(400, "Unsupported recovery action", origin);
+      }
+      const hasVerifiedSender = await isConfiguredSenderDomainVerified(
+        Deno.env.get("RESEND_API_KEY")?.trim() || "",
+        Deno.env.get("RESEND_FROM_EMAIL")?.trim() || ""
       );
-    }
-
-    const firstName = full_name ? full_name.trim().split(" ")[0] : "Creator";
-    const communityLink = whatsapp_url || "https://chat.whatsapp.com/DwUFjABTAPCA9BNmIS5SXc";
-
-    const emailSubject = "You're on the list! Welcome to Sirvinci Academy 🎨";
-
-    const emailHtml = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${emailSubject}</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #F3F4F6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #F3F4F6; padding: 28px 12px;">
-    <tr>
-      <td align="center">
-        <!-- Main Card Container -->
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 540px; background-color: #FFFFFF; border-radius: 24px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.07); border: 1px solid #E5E7EB;">
-          <tr>
-            <td style="padding: 36px 28px;">
-
-              <!-- Sirvinci Academy Official Brand Blue Logo -->
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px 0;">
-                <tr>
-                  <td>
-                    <img src="https://pnkxoktjhzjvjarediid.supabase.co/storage/v1/object/public/assets/sirvinci-academy-logo-blue.png" alt="Sirvinci Academy" width="180" height="47" style="display: block; width: 180px; height: 47px; max-width: 100%; border: 0; outline: none; text-decoration: none;" />
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Heading -->
-              <h1 style="font-size: 24px; font-weight: 800; line-height: 1.25; margin: 0 0 16px 0; color: #111111;">
-                You're officially on the waitlist, ${firstName}! 🎉
-              </h1>
-
-              <!-- Intro Body -->
-              <p style="font-size: 15px; line-height: 1.6; color: #4B5563; margin: 0 0 20px 0;">
-                Thank you for taking the leap. You have secured your founding spot for <strong style="color: #111111;">Sirvinci Academy</strong> — the self-paced masterclass built to teach professional visual design entirely from your smartphone.
-              </p>
-
-              <!-- Highlight Perks Box -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #EEF4FF; border-left: 4px solid #2F76FF; border-radius: 12px; margin: 24px 0;">
-                <tr>
-                  <td style="padding: 18px 20px;">
-                    <div style="font-size: 12px; font-weight: 800; color: #1E3A8A; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
-                      WHAT HAPPENS NEXT:
-                    </div>
-                    <ul style="margin: 0; padding-left: 20px; color: #2D3748; font-size: 14px; line-height: 1.6;">
-                      <li style="margin-bottom: 4px;"><strong style="color: #1A202C;">Founding Member Pricing:</strong> Locked-in lowest price before public launch</li>
-                      <li style="margin-bottom: 4px;"><strong style="color: #1A202C;">Curriculum Sneak Peeks:</strong> Real design breakdowns straight to your inbox</li>
-                      <li><strong style="color: #1A202C;">Early Access:</strong> First access to modules when beta doors open</li>
-                    </ul>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Community Pitch -->
-              <p style="font-size: 15px; line-height: 1.6; color: #4B5563; margin: 0 0 20px 0;">
-                <strong style="color: #111111;">Take the next step right now:</strong> Join our private WhatsApp Community to connect with fellow creators, ask questions directly, and catch exclusive announcements:
-              </p>
-
-              <!-- WhatsApp Button -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px 0 24px 0;">
-                <tr>
-                  <td align="center">
-                    <a href="${communityLink}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #25D366; color: #FFFFFF; font-weight: 700; font-size: 15px; text-decoration: none; padding: 15px 32px; border-radius: 50px; text-align: center; box-shadow: 0 4px 16px rgba(37, 211, 102, 0.35);">
-                      👉 Join the WhatsApp Community Now
-                    </a>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Direct Link Fallback -->
-              <p style="font-size: 13px; color: #6B7280; text-align: center; margin: 0 0 28px 0; word-break: break-all;">
-                Direct link: <a href="${communityLink}" style="color: #2F76FF; text-decoration: underline;">${communityLink}</a>
-              </p>
-
-              <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 24px 0 20px 0;" />
-
-              <!-- Founder Quote -->
-              <p style="font-size: 14px; font-style: italic; color: #4B5563; margin: 0 0 6px 0; line-height: 1.5;">
-                "Design isn't a talent you're born with. It's a skill taught step by step."
-              </p>
-              <p style="font-size: 13px; color: #6B7280; margin: 0;">
-                — David Ogebe, Founder of Sirvinci Creative Studio
-              </p>
-
-            </td>
-          </tr>
-        </table>
-
-        <!-- Email Footer -->
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 540px; margin-top: 20px;">
-          <tr>
-            <td align="center" style="font-size: 12px; color: #888888; line-height: 1.5;">
-              <p style="margin: 0 0 6px 0;">© 2026 Sirvinci Creative Studio. All rights reserved.</p>
-              <p style="margin: 0;">Questions? Reach out to <a href="mailto:hellosirvinci@gmail.com" style="color: #666666; text-decoration: underline;">hellosirvinci@gmail.com</a></p>
-            </td>
-          </tr>
-        </table>
-
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-    `;
-
-    // Resend API key: loaded securely from Supabase secrets environment
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
-
-    if (resendApiKey) {
-      const resendRes = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${resendApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: "Sirvinci Academy <onboarding@resend.dev>",
-          to: [email],
-          subject: emailSubject,
-          html: emailHtml,
-        }),
+      if (body.action === "recover_blocked" && body.include_blocked === true && !hasVerifiedSender) {
+        return buildSafeErrorResponse(409, "The configured sender domain is not verified yet.", origin);
+      }
+      const includeBlocked = body.action === "recover_blocked" && body.include_blocked === true
+        ? true
+        : body.action === "process_due" && hasVerifiedSender;
+      const jobs = await callServiceRpc<EmailJob[]>("claim_waitlist_email_jobs", {
+        p_job_ids: Array.isArray(body.job_ids) ? body.job_ids : null,
+        p_include_blocked: includeBlocked,
+        p_batch_size: Math.min(Math.max(Number(body.batch_size) || 10, 1), 25),
       });
-
-      const resendData = await resendRes.json();
-      console.log("[Resend Delivery Response]", resendRes.status, resendData);
-
-      return new Response(
-        JSON.stringify({
-          success: resendRes.ok,
-          provider: "resend",
-          data: resendData
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const results = await processJobs(jobs);
+      return buildSuccessResponse({
+        ok: true,
+        status: "processed",
+        sender_domain_verified: hasVerifiedSender,
+        count: results.length,
+        results,
+      }, origin);
     }
+
+    if (!email || typeof email !== "string") {
+      return buildSafeErrorResponse(400, "Email is required", origin);
+    }
+
+    const trimmedEmail = email.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      return buildSafeErrorResponse(400, "Email format is invalid", origin);
+    }
+
+    const queued = await queueEmail(trimmedEmail, full_name);
+    return buildSuccessResponse(queued, origin);
   } catch (error) {
-    console.error("[Email Automation Error]:", error);
-    return new Response(
-      JSON.stringify({ error: error.message || "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const message = error instanceof Error ? error.message : "Internal server error";
+    console.error("[Email Automation Error]:", message);
+    return buildSafeErrorResponse(500, "Confirmation email request failed.", origin);
   }
 });
