@@ -109,11 +109,31 @@ const WAITLIST_UTILS = {
       accepted: 'Your registration is saved, and the confirmation email has been accepted for delivery.',
       pending: 'Your registration is saved, and the confirmation email is queued or being processed.',
       retryable: 'Your registration is saved, and we will retry the confirmation email automatically.',
-      blocked: 'Your registration is saved, and the email is queued for recovery once the sender configuration is corrected.',
-      uncertain: 'Your registration is saved, but confirmation delivery could not be verified. Please do not register again; recovery will use the same safe delivery key.',
+      blocked: 'Your registration is saved, but email confirmation is temporarily unavailable while sender configuration is verified.',
+      uncertain: 'Your registration is saved, but confirmation delivery could not be verified. You can request a safe resend without registering again.',
       error: 'Your registration is saved, but the confirmation email could not be sent. Please do not register again.'
     };
     return messages[status] || messages.error;
+  },
+  getDuplicateEmailMessage(status) {
+    const messages = {
+      accepted: 'Your registration is saved, and Resend accepted the confirmation for sending. This does not confirm inbox delivery.',
+      pending: 'Your registration is saved, and its email job is being processed. You do not need to register again.',
+      blocked: 'Your registration is saved, but email confirmation is temporarily unavailable while sender configuration is verified.',
+      uncertain: 'Your registration is saved, but we cannot verify the previous delivery. You can request a safe resend below.',
+      legacy_delivery_unknown: 'Your registration is saved, but its older email history is unavailable. You can request a safe resend below.',
+      unknown: 'Your registration is saved, but its email status could not be verified. You can request a safe resend below.'
+    };
+    return messages[status] || messages.unknown;
+  },
+  getResendRequestMessage(status) {
+    if (status === 'request_received') {
+      return 'Your request was received. If an eligible registration matches this address, the system will attempt safe recovery when sender settings permit. No new registration is created, and no delivery time is guaranteed.';
+    }
+    return 'We could not confirm the request outcome. No new registration was created. You may retry later; repeated requests are rate-limited.';
+  },
+  getRegistrationUncertainMessage() {
+    return 'We could not confirm whether your registration was saved. You may safely submit again with the same email; duplicate registrations are prevented.';
   },
   getSafeErrorMessage(error, fallback) {
     if (typeof error === 'string' && error.trim()) return error.trim();
@@ -122,12 +142,31 @@ const WAITLIST_UTILS = {
   }
 };
 
+async function sendResendRequest(email, requestId) {
+  const response = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/send-welcome-email`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_CONFIG.anonKey,
+      'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      action: 'request_resend',
+      email: email,
+      request_id: requestId
+    })
+  });
+  const data = WAITLIST_UTILS.parseJsonMaybe(await response.text());
+  return { response, data };
+}
+
 if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', () => {
     initNavbarScroll();
     initScrollAnimations();
     initFaqAccordion();
     initWaitlistForm();
+    initRecoveryForm();
     initSmoothScroll();
   });
 }
@@ -237,6 +276,8 @@ function initWaitlistForm() {
   const formSuccess = document.getElementById('form-success');
   const submitBtn = document.getElementById('submit-btn');
   const errorBanner = document.getElementById('form-error-banner');
+  const resendButton = document.getElementById('resend-confirmation-btn');
+  const resendFeedback = document.getElementById('resend-confirmation-feedback');
 
   if (!form) return;
 
@@ -245,6 +286,8 @@ function initWaitlistForm() {
   const mainGoalSelect = document.getElementById('main-goal');
   const expectedCostInput = document.getElementById('expected-cost');
   let isSubmitting = false;
+  let currentRegistrationEmail = '';
+  let currentResendRequestId = null;
 
   const updateFieldAccessibility = (inputEl, isInvalid) => {
     if (!inputEl) return;
@@ -312,6 +355,36 @@ function initWaitlistForm() {
     input.addEventListener('change', () => clearError(input));
   });
 
+  if (resendButton) {
+    resendButton.addEventListener('click', async () => {
+      if (!currentRegistrationEmail || resendButton.disabled) return;
+      if (!currentResendRequestId) currentResendRequestId = crypto.randomUUID();
+      resendButton.disabled = true;
+      const originalText = resendButton.textContent;
+      resendButton.textContent = 'Requesting…';
+      if (resendFeedback) resendFeedback.textContent = '';
+
+      try {
+        const { response, data } = await sendResendRequest(currentRegistrationEmail, currentResendRequestId);
+        if (!response.ok || !data || data.status !== 'request_received') {
+          throw new Error('Confirmation request was not acknowledged.');
+        }
+        if (resendFeedback) {
+          resendFeedback.textContent = WAITLIST_UTILS.getResendRequestMessage(data.status);
+        }
+        currentResendRequestId = null;
+      } catch (error) {
+        console.warn('[Sirvinci Academy] Resend request outcome could not be verified:', error);
+        if (resendFeedback) {
+          resendFeedback.textContent = WAITLIST_UTILS.getResendRequestMessage('unknown');
+        }
+      } finally {
+        resendButton.disabled = false;
+        resendButton.textContent = originalText;
+      }
+    });
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -372,113 +445,49 @@ function initWaitlistForm() {
     `;
 
     try {
-      const registrationResponse = await fetch(`${SUPABASE_CONFIG.url}/rest/v1/waitlist`, {
-        method: 'POST',
-        headers: {
-          'apikey': SUPABASE_CONFIG.anonKey,
-          'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const registrationText = await registrationResponse.text();
-      const registrationData = WAITLIST_UTILS.parseJsonMaybe(registrationText);
-
-      if (!registrationResponse.ok) {
-        const isDuplicate = WAITLIST_UTILS.isDuplicateRegistrationError(registrationResponse, registrationData);
-
-        if (isDuplicate) {
-          let duplicateMessage = 'This email is already on the waitlist. Your existing registration is saved; its confirmation-email status could not be checked. Please do not register again.';
-          try {
-            const emailStatusResponse = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/send-welcome-email`, {
-              method: 'POST',
-              headers: {
-                'apikey': SUPABASE_CONFIG.anonKey,
-                'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ email: emailVal })
-            });
-            const emailStatus = WAITLIST_UTILS.parseJsonMaybe(await emailStatusResponse.text());
-            const lifecycle = WAITLIST_UTILS.getEmailLifecycleStatus(emailStatusResponse, emailStatus);
-
-            if (lifecycle === 'accepted') {
-              duplicateMessage = 'This email is already on the waitlist, and the confirmation email has been accepted for delivery. You do not need to register again.';
-            } else if (lifecycle === 'pending') {
-              duplicateMessage = 'This email is already on the waitlist. Your confirmation email is queued or being processed; you do not need to register again.';
-            } else if (lifecycle === 'blocked') {
-              duplicateMessage = 'This email is already on the waitlist. The confirmation email is saved for recovery after sender configuration is corrected.';
-            } else if (lifecycle === 'retryable') {
-              duplicateMessage = 'This email is already on the waitlist. The confirmation email will be retried automatically.';
-            } else if (lifecycle === 'uncertain') {
-              duplicateMessage = 'This email is already on the waitlist, but confirmation delivery could not be verified. Please do not register again.';
-            } else if (lifecycle === 'error') {
-              duplicateMessage = 'This email is already on the waitlist. Your registration remains saved, but confirmation delivery is not currently available.';
-            }
-          } catch (emailStatusError) {
-            console.warn('[Sirvinci Academy] Could not check duplicate registration email status:', emailStatusError);
-          }
-
-          showRegistrationError(duplicateMessage);
-          formContentArea.style.display = 'block';
-          if (formSuccess) formSuccess.classList.remove('active');
-          return;
-        }
-
-        const message = registrationData && (registrationData.message || registrationData.error)
-          ? registrationData.message || registrationData.error
-          : `Registration failed (${registrationResponse.status}).`;
-        throw new Error(message);
-      }
-
-      let emailResponse;
-      let emailData;
+      let registrationResponse;
       try {
-        emailResponse = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/send-welcome-email`, {
+        registrationResponse = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/send-welcome-email`, {
           method: 'POST',
           headers: {
             'apikey': SUPABASE_CONFIG.anonKey,
             'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            full_name: nameVal,
-            email: emailVal,
-            whatsapp_url: 'https://chat.whatsapp.com/DwUFjABTAPCA9BNmIS5SXc'
-          })
+          body: JSON.stringify({ action: 'register', ...payload })
         });
-        emailData = WAITLIST_UTILS.parseJsonMaybe(await emailResponse.text());
-      } catch (emailErr) {
-        console.warn('[Sirvinci Academy] Email processing response was unavailable after registration saved:', emailErr);
-        showRegistrationSavedButEmailFailed(WAITLIST_UTILS.getEmailOutcomeMessage('uncertain'));
+      } catch (registrationNetworkError) {
+        console.warn('[Sirvinci Academy] Registration response was unavailable:', registrationNetworkError);
+        showRegistrationError(WAITLIST_UTILS.getRegistrationUncertainMessage());
+        formContentArea.style.display = 'block';
+        if (formSuccess) formSuccess.classList.remove('active');
         return;
       }
 
-      const emailOutcome = WAITLIST_UTILS.getEmailLifecycleStatus(emailResponse, emailData);
-      const emailWasSent = WAITLIST_UTILS.isEmailSendSuccess(emailResponse, emailData);
+      const registrationText = await registrationResponse.text();
+      const registrationData = WAITLIST_UTILS.parseJsonMaybe(registrationText);
 
-      if (!emailWasSent) {
-        const emailMessage = emailData && (emailData.error || emailData.message)
-          ? emailData.error || emailData.message
-          : `Your waitlist registration was saved, but the confirmation email could not be sent (${emailResponse.status || 'unknown provider error'}).`;
-
-        console.warn('[Sirvinci Academy] Email send failed after registration saved:', emailMessage);
-
-        showRegistrationSavedButEmailFailed(emailOutcome === 'error'
-          ? emailMessage
-          : WAITLIST_UTILS.getEmailOutcomeMessage(emailOutcome));
-        return;
+      if (!registrationResponse.ok) {
+        const message = registrationData && (registrationData.message || registrationData.error)
+          ? registrationData.message || registrationData.error
+          : `Registration failed (${registrationResponse.status}).`;
+        throw new Error(message);
       }
 
+      if (!registrationData || registrationData.status !== 'received') {
+        throw new Error('We could not confirm your registration request. Please try again later.');
+      }
+
+      currentRegistrationEmail = emailVal;
+      currentResendRequestId = null;
       formContentArea.style.display = 'none';
       const successTitle = formSuccess.querySelector('.success-title');
       const successBody = formSuccess.querySelector('.success-body');
-      if (successTitle) successTitle.textContent = 'You’re on the list!';
+      if (successTitle) successTitle.textContent = 'Registration saved';
       if (successBody) {
-        successBody.textContent = 'Your registration is saved, and the confirmation email has been accepted for delivery. We’ll be in touch soon with updates, free previews, and founding member pricing.';
+        successBody.textContent = 'Your registration is saved. If this address was already registered, no second registration was added. Email confirmation is handled separately; use the resend action below if needed. No delivery time is guaranteed.';
       }
+      if (resendFeedback) resendFeedback.textContent = '';
       formSuccess.classList.add('active');
 
       if (formCard) {
@@ -500,6 +509,76 @@ function initWaitlistForm() {
   });
 }
 
+/* --- 6. Persistent Confirmation Recovery Form --- */
+function initRecoveryForm() {
+  const recoveryForm = document.getElementById('recovery-form');
+  const recoveryEmailInput = document.getElementById('recovery-email');
+  const recoverySubmitBtn = document.getElementById('recovery-submit-btn');
+  const recoveryFeedback = document.getElementById('recovery-feedback');
+  const recoveryInputGroup = recoveryEmailInput ? recoveryEmailInput.closest('.recovery-input-group') : null;
+
+  if (!recoveryForm || !recoveryEmailInput || !recoverySubmitBtn) return;
+
+  let recoveryRequestId = null;
+  let isRecoverySubmitting = false;
+
+  const clearRecoveryError = () => {
+    if (recoveryInputGroup) recoveryInputGroup.classList.remove('has-error');
+    recoveryEmailInput.setAttribute('aria-invalid', 'false');
+  };
+
+  const showRecoveryError = () => {
+    if (recoveryInputGroup) recoveryInputGroup.classList.add('has-error');
+    recoveryEmailInput.setAttribute('aria-invalid', 'true');
+  };
+
+  recoveryEmailInput.addEventListener('input', clearRecoveryError);
+
+  recoveryForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (isRecoverySubmitting) return;
+
+    const emailVal = WAITLIST_UTILS.normalizeEmail(recoveryEmailInput.value);
+
+    if (!emailVal || !WAITLIST_UTILS.isValidEmail(emailVal)) {
+      showRecoveryError();
+      recoveryEmailInput.focus();
+      return;
+    }
+
+    clearRecoveryError();
+    if (!recoveryRequestId) recoveryRequestId = crypto.randomUUID();
+
+    isRecoverySubmitting = true;
+    recoverySubmitBtn.disabled = true;
+    const originalHtml = recoverySubmitBtn.innerHTML;
+    recoverySubmitBtn.innerHTML = '<span class="btn-content">Requesting…</span>';
+    if (recoveryFeedback) recoveryFeedback.textContent = '';
+
+    try {
+      const { response, data } = await sendResendRequest(emailVal, recoveryRequestId);
+      if (!response.ok || !data || data.status !== 'request_received') {
+        throw new Error('Confirmation request was not acknowledged.');
+      }
+      if (recoveryFeedback) {
+        recoveryFeedback.textContent = WAITLIST_UTILS.getResendRequestMessage(data.status);
+      }
+      // Success: clear the request ID so a new deliberate request gets a fresh identity
+      recoveryRequestId = null;
+    } catch (error) {
+      console.warn('[Sirvinci Academy] Recovery request outcome could not be verified:', error);
+      if (recoveryFeedback) {
+        recoveryFeedback.textContent = WAITLIST_UTILS.getResendRequestMessage('unknown');
+      }
+      // Preserve the request ID for retry of this uncertain operation
+    } finally {
+      isRecoverySubmitting = false;
+      recoverySubmitBtn.disabled = false;
+      recoverySubmitBtn.innerHTML = originalHtml;
+    }
+  });
+}
+
 if (typeof document !== 'undefined') {
   const spinnerStyle = document.createElement('style');
   spinnerStyle.textContent = `@keyframes spin { 100% { transform: rotate(360deg); } }`;
@@ -509,6 +588,7 @@ if (typeof document !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     WAITLIST_UTILS,
+    sendResendRequest,
     buildWaitlistPayload: WAITLIST_UTILS.buildPayload,
     isValidEmail: WAITLIST_UTILS.isValidEmail,
     parseJsonMaybe: WAITLIST_UTILS.parseJsonMaybe,

@@ -1249,6 +1249,131 @@ button, input, select {
   line-height: 1.6;
 }
 
+.success-resend-action {
+  max-width: 480px;
+  margin: 20px auto 0;
+}
+
+#resend-confirmation-feedback {
+  min-height: 1.5em;
+  margin-top: 10px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Persistent Confirmation Recovery Section */
+.recovery-section {
+  padding-top: 40px;
+  padding-bottom: 40px;
+}
+
+.recovery-card {
+  max-width: 600px;
+  margin: 0 auto;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 36px 28px;
+  text-align: center;
+}
+
+.recovery-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.recovery-icon {
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.recovery-title {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.recovery-description {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 auto 20px;
+  max-width: 480px;
+}
+
+.recovery-form {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.recovery-input-group {
+  margin-bottom: 14px;
+  text-align: left;
+}
+
+.recovery-email-input {
+  width: 100%;
+}
+
+.recovery-error-msg {
+  display: none;
+}
+
+.recovery-input-group.has-error .recovery-error-msg {
+  display: block;
+}
+
+.recovery-input-group.has-error .recovery-email-input {
+  border-color: #FF5E5E;
+  box-shadow: 0 0 0 3px rgba(255, 94, 94, 0.15);
+}
+
+.recovery-submit-btn {
+  width: 100%;
+}
+
+.recovery-feedback {
+  min-height: 1.5em;
+  margin-top: 14px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 480px) {
+  .recovery-card {
+    padding: 28px 18px;
+  }
+
+  .recovery-title {
+    font-size: 1.15rem;
+  }
+
+  .recovery-description {
+    font-size: 0.88rem;
+  }
+}
+
 /* WhatsApp Community CTA in Success State */
 .success-whatsapp-cta {
   margin-top: 28px;

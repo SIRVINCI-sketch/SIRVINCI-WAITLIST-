@@ -44,7 +44,7 @@ The GitHub production deployment records identify these working Vercel aliases:
 The URL `https://sirvinci-academy.vercel.app/` is not an alias for either recorded Vercel project and returns `DEPLOYMENT_NOT_FOUND`.
 
 ## ☁️ Supabase Integration
-Form submissions post directly to the Supabase REST endpoint:
+The browser submits to the `send-welcome-email` Edge Function. The function uses service-role-only database RPCs for registration and resend requests; browser clients cannot insert directly into the waitlist table or read registration/job status.
 - **Table**: `public.waitlist`
 - **Fields Captured**:
   - `full_name` (Text, required)
@@ -57,6 +57,8 @@ Form submissions post directly to the Supabase REST endpoint:
   - `status` (Text, default: `pending`)
 
 New registrations atomically create a private email outbox job through a database trigger. The Edge Function sends using the `RESEND_API_KEY` and `RESEND_FROM_EMAIL` secrets; the database outbox tracks accepted, retryable, blocked, failed, and uncertain outcomes. The scheduled worker runs every five minutes and only includes blocked jobs in recovery after Resend reports the configured sender domain as verified. Recovery requests are authenticated with `EMAIL_RECOVERY_SECRET`, mirrored in Supabase Vault for the scheduled job.
+
+Students can explicitly request a confirmation resend from the saved-registration screen. Requests reuse an idempotency UUID, are limited to one per email per 15 minutes and three per rolling day, and receive a generic acknowledgment that does not disclose whether an email address is registered. Legacy registrations without outbox history are held as uncertain until the student requests recovery; no historical registrations are automatically resent.
 
 Apply the migrations in `supabase/migrations/` to a linked Supabase project. Run isolated logic tests with `node --test tests/waitlist-flow.test.js`; run the rollback-only live schema/queue integration test with `npx supabase db query --linked --file tests/waitlist-recovery.integration.sql`.
 

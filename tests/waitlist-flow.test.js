@@ -4,6 +4,7 @@ const EMAIL_CORE = require('../supabase/functions/send-welcome-email/recovery-co
 
 const {
   WAITLIST_UTILS,
+  sendResendRequest,
   buildWaitlistPayload,
   isValidEmail,
   isEmailSendSuccess,
@@ -98,9 +99,38 @@ test('maps email lifecycle statuses to the correct user-visible outcomes', () =>
   assert.match(WAITLIST_UTILS.getEmailOutcomeMessage('pending'), /registration is saved/i);
   assert.match(WAITLIST_UTILS.getEmailOutcomeMessage('accepted'), /accepted for delivery/i);
   assert.match(WAITLIST_UTILS.getEmailOutcomeMessage('retryable'), /retry.*automatically/i);
-  assert.match(WAITLIST_UTILS.getEmailOutcomeMessage('blocked'), /queued for recovery/i);
+  assert.match(WAITLIST_UTILS.getEmailOutcomeMessage('blocked'), /temporarily unavailable/i);
   assert.match(WAITLIST_UTILS.getEmailOutcomeMessage('uncertain'), /could not be verified/i);
   assert.match(WAITLIST_UTILS.getEmailOutcomeMessage('error'), /could not be sent/i);
+});
+
+test('duplicate registration statuses map to distinct safe messages without claiming inbox delivery', () => {
+  const accepted = WAITLIST_UTILS.getDuplicateEmailMessage('accepted');
+  const pending = WAITLIST_UTILS.getDuplicateEmailMessage('pending');
+  const blocked = WAITLIST_UTILS.getDuplicateEmailMessage('blocked');
+  const unknown = WAITLIST_UTILS.getDuplicateEmailMessage('uncertain');
+  const legacy = WAITLIST_UTILS.getDuplicateEmailMessage('legacy_delivery_unknown');
+
+  assert.match(accepted, /Resend accepted .* for sending/i);
+  assert.doesNotMatch(accepted, /delivered to your inbox/i);
+  assert.match(pending, /being processed/i);
+  assert.match(blocked, /temporarily unavailable/i);
+  assert.match(unknown, /request a safe resend/i);
+  assert.match(legacy, /older email history is unavailable/i);
+});
+
+test('resend feedback does not promise a delivery time', () => {
+  const message = WAITLIST_UTILS.getResendRequestMessage('request_received');
+  assert.match(message, /request was received/i);
+  assert.match(message, /no delivery time is guaranteed/i);
+  assert.doesNotMatch(message, /24.?48 hours/i);
+});
+
+test('uncertain registration acknowledgment tells the student a retry is duplicate-safe', () => {
+  const message = WAITLIST_UTILS.getRegistrationUncertainMessage();
+  assert.match(message, /could not confirm whether.*saved/i);
+  assert.match(message, /safely submit again/i);
+  assert.match(message, /duplicate registrations are prevented/i);
 });
 
 test('parseJsonMaybe returns only valid JSON and safe error messaging remains stable', () => {
@@ -121,6 +151,30 @@ test('recovery worker classifies Resend outcomes and uses bounded exponential ba
   assert.equal(EMAIL_CORE.isSenderConfigurationValid('test-key', 'not-an-address'), false);
   assert.equal(EMAIL_CORE.isSenderConfigurationValid('test-key', 'sender@example.com'), true);
   assert.deepEqual([1, 2, 3, 4, 5, 6, 7].map(EMAIL_CORE.retryDelaySeconds), [30, 120, 600, 3600, 21600, 21600, 21600]);
+});
+
+test('resend cooldown and daily rate limit are enforced by deterministic policy', () => {
+  const now = Date.now();
+  const withinCooldown = EMAIL_CORE.evaluateResendThrottle({
+    lastRequestedAt: new Date(now - 5 * 60 * 1000).toISOString(),
+    windowStartedAt: new Date(now - 60 * 60 * 1000).toISOString(),
+    requestCount: 1
+  }, now);
+  const dailyLimit = EMAIL_CORE.evaluateResendThrottle({
+    lastRequestedAt: new Date(now - 20 * 60 * 1000).toISOString(),
+    windowStartedAt: new Date(now - 60 * 60 * 1000).toISOString(),
+    requestCount: 3
+  }, now);
+  const allowed = EMAIL_CORE.evaluateResendThrottle({
+    lastRequestedAt: new Date(now - 20 * 60 * 1000).toISOString(),
+    windowStartedAt: new Date(now - 25 * 60 * 60 * 1000).toISOString(),
+    requestCount: 3
+  }, now);
+
+  assert.deepEqual(withinCooldown, { allowed: false, reason: 'cooldown' });
+  assert.deepEqual(dailyLimit, { allowed: false, reason: 'daily_limit' });
+  assert.equal(allowed.allowed, true);
+  assert.equal(allowed.nextCount, 1);
 });
 
 test('Resend testing-domain rejection is configuration-blocked without retry', async () => {
@@ -266,4 +320,143 @@ test('migration provides transactional enqueue, bounded claims, protected recove
   assert.match(migration, /REVOKE ALL ON TABLE public\.waitlist FROM PUBLIC, anon, authenticated/);
   assert.match(migration, /REVOKE ALL ON FUNCTION public\.claim_waitlist_email_jobs/);
   assert.match(migration, /waitlist_email_jobs/);
+});
+
+test('resend migration requires service-role RPCs, private rate limits, and idempotency ledger', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const migration = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261012100000_waitlist_resend_requests.sql'), 'utf8');
+
+  assert.match(migration, /REVOKE INSERT \(full_name, email, canva_experience, main_goal, stopped_reason, payment_pref, expected_cost\)/);
+  assert.match(migration, /waitlist_email_resend_limits/);
+  assert.match(migration, /request_count >= 3/);
+  assert.match(migration, /interval '15 minutes'/);
+  assert.match(migration, /waitlist_email_resend_requests/);
+  assert.match(migration, /p_request_id uuid/);
+  assert.match(migration, /FOR UPDATE/);
+  assert.match(migration, /legacy_delivery_unknown/);
+  assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.request_waitlist_email_resend\(text, boolean, uuid\) TO service_role/);
+  assert.doesNotMatch(migration, /GRANT EXECUTE ON FUNCTION public\.request_waitlist_email_resend\([^)]*\) TO anon/);
+});
+
+test('public Edge responses do not reveal waitlist membership or job state', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const functionSource = fs.readFileSync(path.join(__dirname, '../supabase/functions/send-welcome-email/index.ts'), 'utf8');
+  const resendHandler = functionSource.slice(functionSource.indexOf('async function requestConfirmationResend'), functionSource.indexOf('async function isConfiguredSenderDomainVerified'));
+  const registrationHandler = functionSource.slice(functionSource.indexOf('async function registerWaitlist'), functionSource.indexOf('async function requestConfirmationResend'));
+
+  assert.match(resendHandler, /return buildSuccessResponse\(\{ ok: true, status: "request_received" \}, origin\)/);
+  assert.doesNotMatch(resendHandler, /job_id|\.status/);
+  assert.match(registrationHandler, /return buildSuccessResponse\(\{ ok: true, status: "received" \}, origin\)/);
+  assert.doesNotMatch(registrationHandler, /duplicate|already registered/i);
+});
+
+// --- Persistent Recovery Section Tests ---
+
+test('persistent recovery section HTML is present in the page source', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+
+  // The section must exist in the static HTML (not dynamically injected)
+  assert.match(html, /id="recovery"/);
+  assert.match(html, /id="recovery-form"/);
+  assert.match(html, /id="recovery-email"/);
+  assert.match(html, /id="recovery-submit-btn"/);
+  assert.match(html, /id="recovery-feedback"/);
+  // Must have accessible label
+  assert.match(html, /for="recovery-email"/);
+  // Must not depend on form-success state
+  assert.match(html, /class="[^"]*recovery-section[^"]*"/);
+  // Must have descriptive heading
+  assert.match(html, /Already on the waitlist\?/);
+});
+
+test('recovery section is outside the form-success card and independent of registration state', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+
+  const recoveryStart = html.indexOf('id="recovery"');
+  const formSuccessEnd = html.indexOf('</div>', html.indexOf('id="form-success"'));
+  // Recovery section appears after the form card section closes
+  assert.ok(recoveryStart > formSuccessEnd, 'Recovery section must be after the form success card');
+  // Recovery is its own <section>
+  const sectionTag = html.lastIndexOf('<section', recoveryStart);
+  assert.ok(sectionTag > 0);
+  assert.match(html.slice(sectionTag, recoveryStart + 50), /class="[^"]*recovery-section/);
+});
+
+test('sendResendRequest is a callable function exported from main.js', () => {
+  assert.equal(typeof sendResendRequest, 'function');
+});
+
+test('recovery form uses the same request_resend action as the in-success resend button', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const mainSource = fs.readFileSync(path.join(__dirname, '../main.js'), 'utf8');
+
+  // Both the in-success resend handler and recovery form must call sendResendRequest
+  const inSuccessBlock = mainSource.slice(
+    mainSource.indexOf('resendButton.addEventListener'),
+    mainSource.indexOf('function initRecoveryForm')
+  );
+  const recoveryBlock = mainSource.slice(
+    mainSource.indexOf('function initRecoveryForm'),
+    mainSource.lastIndexOf('function initRecoveryForm') + 5000
+  );
+
+  assert.match(inSuccessBlock, /sendResendRequest\(/);
+  assert.match(recoveryBlock, /sendResendRequest\(/);
+  // Both use the same shared function rather than inline fetch
+  assert.doesNotMatch(inSuccessBlock, /action.*request_resend/);
+  assert.doesNotMatch(recoveryBlock, /action.*request_resend/);
+});
+
+test('recovery form validates email before sending a network request', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const mainSource = fs.readFileSync(path.join(__dirname, '../main.js'), 'utf8');
+  const recoveryBlock = mainSource.slice(
+    mainSource.indexOf('function initRecoveryForm'),
+    mainSource.length
+  );
+
+  // Must validate before sending
+  const validationIdx = recoveryBlock.indexOf('isValidEmail');
+  const fetchIdx = recoveryBlock.indexOf('sendResendRequest');
+  assert.ok(validationIdx > 0 && fetchIdx > 0);
+  assert.ok(validationIdx < fetchIdx, 'Validation must occur before the network request');
+});
+
+test('recovery request ID is preserved on failure for safe retry and cleared on success', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const mainSource = fs.readFileSync(path.join(__dirname, '../main.js'), 'utf8');
+  const recoveryBlock = mainSource.slice(
+    mainSource.indexOf('function initRecoveryForm'),
+    mainSource.length
+  );
+
+  // On success, the request ID is cleared
+  assert.match(recoveryBlock, /recoveryRequestId\s*=\s*null/);
+  // The catch block does NOT clear the request ID (preserving it for retry)
+  const catchBlock = recoveryBlock.slice(recoveryBlock.indexOf('catch (error)'));
+  assert.doesNotMatch(catchBlock.slice(0, catchBlock.indexOf('finally')), /recoveryRequestId\s*=\s*null/);
+});
+
+test('resend request message for acknowledged request does not promise delivery time', () => {
+  const msg = WAITLIST_UTILS.getResendRequestMessage('request_received');
+  assert.match(msg, /request was received/i);
+  assert.match(msg, /no delivery time is guaranteed/i);
+  assert.doesNotMatch(msg, /24.?48 hours/i);
+  assert.doesNotMatch(msg, /will be delivered/i);
+});
+
+test('resend request message for unknown outcome advises retry without promising', () => {
+  const msg = WAITLIST_UTILS.getResendRequestMessage('unknown');
+  assert.match(msg, /could not confirm/i);
+  assert.match(msg, /no new registration was created/i);
+  assert.match(msg, /rate-limited/i);
 });

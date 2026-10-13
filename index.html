@@ -468,6 +468,13 @@
               Check your email for confirmation — we'll be in touch soon with updates, free previews, and your founding member pricing.
             </p>
 
+            <div class="success-resend-action">
+              <button type="button" class="btn btn-primary btn-block" id="resend-confirmation-btn">
+                Resend confirmation email
+              </button>
+              <p id="resend-confirmation-feedback" role="status" aria-live="polite"></p>
+            </div>
+
             <!-- WhatsApp Community CTA -->
             <div class="success-whatsapp-cta">
               <p class="whatsapp-prompt">Take the next step now — join our private creator community:</p>
@@ -610,7 +617,47 @@
       </div>
     </section>
 
-    <!-- 10. FINAL CTA SECTION (Centered Text & Centered Button) -->
+    <!-- 10. CONFIRMATION RECOVERY SECTION (Persistent, reload-safe) -->
+    <section class="section recovery-section" id="recovery">
+      <div class="container">
+        <div class="recovery-card scroll-reveal">
+          <div class="recovery-header">
+            <svg class="recovery-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+            <h2 class="recovery-title">Already on the waitlist?</h2>
+          </div>
+          <p class="recovery-description">
+            Didn't receive your confirmation email? Enter your email below to request it again. You don't need to register twice.
+          </p>
+          <form id="recovery-form" class="recovery-form" novalidate>
+            <div class="recovery-input-group">
+              <label for="recovery-email" class="sr-only">Email address</label>
+              <input
+                type="email"
+                id="recovery-email"
+                name="email"
+                class="form-input recovery-email-input"
+                placeholder="Enter your email address"
+                required
+                autocomplete="email"
+                maxlength="254"
+                aria-invalid="false"
+                aria-describedby="recovery-email-error recovery-feedback"
+              >
+              <span id="recovery-email-error" class="field-error-msg recovery-error-msg">Please enter a valid email address.</span>
+            </div>
+            <button type="submit" id="recovery-submit-btn" class="btn btn-primary recovery-submit-btn">
+              <span class="btn-content">Request confirmation email</span>
+            </button>
+          </form>
+          <div id="recovery-feedback" class="recovery-feedback" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11. FINAL CTA SECTION (Centered Text & Centered Button) -->
     <section class="section final-cta-section">
       <div class="final-cta-glow" aria-hidden="true"></div>
       <div class="container final-cta-container scroll-reveal">

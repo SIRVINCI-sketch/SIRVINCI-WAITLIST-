@@ -21,8 +21,14 @@ const allowedOrigins = new Set([
 interface EmailRequest {
   full_name?: string;
   email: string;
+  canva_experience?: string;
+  main_goal?: string;
+  stopped_reason?: string;
+  payment_pref?: string;
+  expected_cost?: string;
   whatsapp_url?: string;
   action?: string;
+  request_id?: string;
   batch_size?: number;
   job_ids?: string[];
   include_blocked?: boolean;
@@ -59,6 +65,7 @@ interface RecoveryCore {
 declare const WAITLIST_EMAIL_CORE: RecoveryCore;
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://pnkxoktjhzjvjarediid.supabase.co";
+let senderVerificationCache: { domain: string; checkedAt: number; verified: boolean } | null = null;
 
 async function callServiceRpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -115,31 +122,63 @@ async function processJobs(jobs: EmailJob[]) {
   return results;
 }
 
-async function queueEmail(email: string, fullName: string | undefined) {
-  const jobs = await callServiceRpc<EmailJob[]>("enqueue_waitlist_email", { p_email: email });
-  const job = jobs[0];
-  if (!job) throw new Error("No durable email job could be created.");
-  if (job.status === "accepted") return { ok: true, status: "accepted", job_id: job.job_id };
-  if (job.status === "processing") return { ok: true, status: "pending", job_id: job.job_id };
-  if (job.status === "blocked") return { ok: true, status: "blocked", error_category: "configuration_blocked", job_id: job.job_id };
-  if (job.status === "uncertain") return { ok: true, status: "uncertain", error_category: "delivery_uncertain", job_id: job.job_id };
-  if (job.status === "failed") return { ok: false, status: "failed", error_category: "provider_rejected", job_id: job.job_id };
-
-  const claimed = await callServiceRpc<EmailJob[]>("claim_waitlist_email_jobs", {
-    p_job_ids: [job.job_id],
-    p_include_blocked: false,
-    p_batch_size: 1,
-  });
-  if (!claimed.length) {
-    const waitingStatus = job.status === "retryable" ? "retryable" : "pending";
-    return { ok: true, status: waitingStatus, job_id: job.job_id };
+async function registerWaitlist(body: Partial<EmailRequest>, origin?: string | null) {
+  const fullName = typeof body.full_name === "string" ? body.full_name.trim() : "";
+  const email = typeof body.email === "string" ? body.email.trim() : "";
+  if (!fullName || fullName.length > 120 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+    return buildSafeErrorResponse(400, "Please provide a valid name and email address.", origin);
   }
-  const [result] = await processJobs(claimed);
-  return { ok: true, ...result, job_id: job.job_id };
+
+  await callServiceRpc<string>("register_waitlist", {
+    p_full_name: fullName,
+    p_email: email,
+    p_canva_experience: body.canva_experience ?? null,
+    p_main_goal: body.main_goal ?? null,
+    p_stopped_reason: body.stopped_reason ?? null,
+    p_payment_pref: body.payment_pref ?? null,
+    p_expected_cost: body.expected_cost ?? null,
+  });
+
+  // Ensure older registrations have an explicit uncertain outbox record, but
+  // do not synchronously dispatch. The batched worker avoids response-time
+  // membership side channels and processes due jobs automatically.
+  try {
+    await callServiceRpc<EmailJob[]>("enqueue_waitlist_email", { p_email: email });
+  } catch (error) {
+    // The registration is already committed; dispatch failure must not turn
+    // that into a false registration error. The scheduled worker will recover.
+    console.error("[Email Recovery] Registration dispatch deferred:", error instanceof Error ? error.message : "unknown error");
+  }
+
+  return buildSuccessResponse({ ok: true, status: "received" }, origin);
+}
+
+async function requestConfirmationResend(email: string, requestId: string, origin?: string | null) {
+  const apiKey = Deno.env.get("RESEND_API_KEY")?.trim() || "";
+  const fromEmail = Deno.env.get("RESEND_FROM_EMAIL")?.trim() || "";
+  const senderVerified = await isConfiguredSenderDomainVerified(apiKey, fromEmail);
+  await callServiceRpc<Array<EmailJob & { outcome: string }>>(
+    "request_waitlist_email_resend",
+    {
+      p_email: email,
+      p_sender_verified: senderVerified,
+      p_request_id: requestId,
+    }
+  );
+  // Deliberately disclose neither registration existence nor queue/provider
+  // state. This is the same response for a new, duplicate, unknown, and
+  // rate-limited address.
+  return buildSuccessResponse({ ok: true, status: "request_received" }, origin);
 }
 
 async function isConfiguredSenderDomainVerified(apiKey: string, fromEmail: string): Promise<boolean> {
-  return await WAITLIST_EMAIL_CORE.isSenderDomainVerified(apiKey, fromEmail, fetch);
+  const domain = fromEmail.trim().split("@").pop()?.toLowerCase() || "";
+  if (senderVerificationCache?.domain === domain && Date.now() - senderVerificationCache.checkedAt < 60_000) {
+    return senderVerificationCache.verified;
+  }
+  const verified = await WAITLIST_EMAIL_CORE.isSenderDomainVerified(apiKey, fromEmail, fetch);
+  senderVerificationCache = { domain, checkedAt: Date.now(), verified };
+  return verified;
 }
 
 function getCorsHeaders(origin?: string | null) {
@@ -188,6 +227,19 @@ Deno.serve(async (req: Request) => {
     const body = (await req.json()) as Partial<EmailRequest>;
     const { full_name, email, whatsapp_url } = body;
 
+    if (body.action === "register") {
+      return await registerWaitlist(body, origin);
+    }
+    if (body.action === "request_resend") {
+      if (!email || typeof email !== "string" || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        return buildSafeErrorResponse(400, "Email format is invalid", origin);
+      }
+      if (typeof body.request_id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.request_id)) {
+        return buildSafeErrorResponse(400, "A valid request identifier is required.", origin);
+      }
+      return await requestConfirmationResend(email.trim(), body.request_id, origin);
+    }
+
     const recoverySecret = Deno.env.get("EMAIL_RECOVERY_SECRET")?.trim() || "";
     const suppliedRecoverySecret = req.headers.get("x-email-recovery-secret") || "";
     const isRecoveryRequest = recoverySecret.length > 0 && WAITLIST_EMAIL_CORE.constantTimeEquals(suppliedRecoverySecret, recoverySecret);
@@ -221,18 +273,7 @@ Deno.serve(async (req: Request) => {
       }, origin);
     }
 
-    if (!email || typeof email !== "string") {
-      return buildSafeErrorResponse(400, "Email is required", origin);
-    }
-
-    const trimmedEmail = email.trim();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedEmail)) {
-      return buildSafeErrorResponse(400, "Email format is invalid", origin);
-    }
-
-    const queued = await queueEmail(trimmedEmail, full_name);
-    return buildSuccessResponse(queued, origin);
+    return buildSafeErrorResponse(400, "Unsupported request", origin);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Internal server error";
     console.error("[Email Automation Error]:", message);

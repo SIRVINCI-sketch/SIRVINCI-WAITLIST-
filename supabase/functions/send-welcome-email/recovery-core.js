@@ -72,6 +72,19 @@
     return Number.isFinite(createdTime) && now - createdTime < 23 * 60 * 60 * 1000;
   }
 
+  function evaluateResendThrottle({ lastRequestedAt, windowStartedAt, requestCount }, now = Date.now()) {
+    const lastRequest = Date.parse(lastRequestedAt || '');
+    const windowStart = Date.parse(windowStartedAt || '');
+    const count = Number(requestCount) || 0;
+    if (Number.isFinite(lastRequest) && now - lastRequest < 15 * 60 * 1000) {
+      return { allowed: false, reason: 'cooldown' };
+    }
+    if (Number.isFinite(windowStart) && now - windowStart < 24 * 60 * 60 * 1000 && count >= 3) {
+      return { allowed: false, reason: 'daily_limit' };
+    }
+    return { allowed: true, nextCount: Number.isFinite(windowStart) && now - windowStart < 24 * 60 * 60 * 1000 ? count + 1 : 1 };
+  }
+
   async function sendClaimedJob(job, options) {
     const {
       apiKey,
@@ -161,6 +174,7 @@
     isSenderConfigurationValid,
     isSenderDomainVerified,
     isWithinIdempotencyWindow,
+    evaluateResendThrottle,
     sendClaimedJob
   };
 
