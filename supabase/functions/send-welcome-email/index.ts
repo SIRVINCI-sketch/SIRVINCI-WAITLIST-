@@ -12,6 +12,7 @@ const allowedOrigins = new Set([
   "http://localhost:3030",
   "http://127.0.0.1:3030",
   "http://localhost:5500",
+  "https://waitlist.sirvinci.com",
   "https://sirvinciacademy.com",
   "https://www.sirvinciacademy.com",
   "https://sirvinciacademy-waitlist.vercel.app",

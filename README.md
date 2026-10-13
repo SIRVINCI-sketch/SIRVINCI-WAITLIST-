@@ -36,8 +36,11 @@ Then visit **`http://localhost:3030/`** in your browser.
 
 ---
 
-## 🌐 Vercel Production URLs
-The GitHub production deployment records identify these working Vercel aliases:
+## 🌐 Canonical Production & Deployment URLs
+The official canonical public waitlist website is:
+- **`https://waitlist.sirvinci.com/`**
+
+Authorized Vercel deployment and preview aliases:
 - https://sirvinciacademy-waitlist.vercel.app/
 - https://sirvinci-waitlist.vercel.app/
 

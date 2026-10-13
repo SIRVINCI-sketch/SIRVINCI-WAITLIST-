@@ -281,11 +281,13 @@ test('recovery secret comparison is constant-time for equal-length candidates', 
 test('CORS allows only configured origins and never returns a fallback origin for an attacker', () => {
   const allowed = new Set([
     'http://localhost:3030',
+    'https://waitlist.sirvinci.com',
     'https://sirvinciacademy.com',
     'https://sirvinciacademy-waitlist.vercel.app',
     'https://sirvinci-waitlist.vercel.app'
   ]);
   assert.equal(EMAIL_CORE.getCorsHeaders('http://localhost:3030', allowed)['Access-Control-Allow-Origin'], 'http://localhost:3030');
+  assert.equal(EMAIL_CORE.getCorsHeaders('https://waitlist.sirvinci.com', allowed)['Access-Control-Allow-Origin'], 'https://waitlist.sirvinci.com');
   assert.equal(EMAIL_CORE.getCorsHeaders('https://sirvinciacademy-waitlist.vercel.app', allowed)['Access-Control-Allow-Origin'], 'https://sirvinciacademy-waitlist.vercel.app');
   assert.equal(EMAIL_CORE.getCorsHeaders('https://sirvinci-waitlist.vercel.app', allowed)['Access-Control-Allow-Origin'], 'https://sirvinci-waitlist.vercel.app');
   assert.equal(EMAIL_CORE.getCorsHeaders('https://attacker.invalid', allowed)['Access-Control-Allow-Origin'], undefined);
