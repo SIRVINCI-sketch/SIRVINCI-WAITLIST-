@@ -153,28 +153,78 @@ test('recovery worker classifies Resend outcomes and uses bounded exponential ba
   assert.deepEqual([1, 2, 3, 4, 5, 6, 7].map(EMAIL_CORE.retryDelaySeconds), [30, 120, 600, 3600, 21600, 21600, 21600]);
 });
 
-test('resend cooldown and daily rate limit are enforced by deterministic policy', () => {
+test('resend cooldown and rolling limits match the database policy', () => {
   const now = Date.now();
-  const withinCooldown = EMAIL_CORE.evaluateResendThrottle({
-    lastRequestedAt: new Date(now - 5 * 60 * 1000).toISOString(),
-    windowStartedAt: new Date(now - 60 * 60 * 1000).toISOString(),
+  const base = {
+    lastRequestedAt: new Date(now - 12 * 1000).toISOString(),
+    minuteStartedAt: new Date(now - 30 * 1000).toISOString(),
+    minuteCount: 1,
+    hourStartedAt: new Date(now - 30 * 60 * 1000).toISOString(),
+    hourCount: 1,
+    windowStartedAt: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
     requestCount: 1
+  };
+  const withinCooldown = EMAIL_CORE.evaluateResendThrottle({
+    ...base, lastRequestedAt: new Date(now - 5 * 1000).toISOString()
+  }, now);
+  const minuteLimit = EMAIL_CORE.evaluateResendThrottle({
+    ...base, minuteCount: 3
+  }, now);
+  const hourLimit = EMAIL_CORE.evaluateResendThrottle({
+    ...base,
+    minuteStartedAt: new Date(now - 2 * 60 * 1000).toISOString(),
+    minuteCount: 0,
+    hourCount: 10
   }, now);
   const dailyLimit = EMAIL_CORE.evaluateResendThrottle({
-    lastRequestedAt: new Date(now - 20 * 60 * 1000).toISOString(),
-    windowStartedAt: new Date(now - 60 * 60 * 1000).toISOString(),
-    requestCount: 3
+    ...base,
+    minuteStartedAt: new Date(now - 2 * 60 * 1000).toISOString(),
+    minuteCount: 0,
+    hourStartedAt: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
+    hourCount: 0,
+    requestCount: 20
   }, now);
   const allowed = EMAIL_CORE.evaluateResendThrottle({
-    lastRequestedAt: new Date(now - 20 * 60 * 1000).toISOString(),
+    ...base,
+    minuteStartedAt: new Date(now - 2 * 60 * 1000).toISOString(),
+    minuteCount: 1,
+    hourStartedAt: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
+    hourCount: 1,
     windowStartedAt: new Date(now - 25 * 60 * 60 * 1000).toISOString(),
-    requestCount: 3
+    requestCount: 20
   }, now);
 
   assert.deepEqual(withinCooldown, { allowed: false, reason: 'cooldown' });
+  assert.deepEqual(minuteLimit, { allowed: false, reason: 'minute_limit' });
+  assert.deepEqual(hourLimit, { allowed: false, reason: 'hour_limit' });
   assert.deepEqual(dailyLimit, { allowed: false, reason: 'daily_limit' });
   assert.equal(allowed.allowed, true);
-  assert.equal(allowed.nextCount, 1);
+  assert.equal(allowed.nextMinuteCount, 2);
+  assert.equal(allowed.nextHourCount, 2);
+  assert.equal(allowed.nextDayCount, 1);
+});
+
+test('trusted client IP parser rejects missing, spoof-list, hostname, and malformed input', () => {
+  assert.equal(EMAIL_CORE.normalizeTrustedClientIp('203.0.113.8'), '203.0.113.8');
+  assert.equal(EMAIL_CORE.normalizeTrustedClientIp('203.000.113.8'), '203.0.113.8');
+  assert.equal(EMAIL_CORE.normalizeTrustedClientIp('2001:DB8::1'), '2001:db8::1');
+  assert.equal(EMAIL_CORE.normalizeTrustedClientIp('203.0.113.8, 198.51.100.1'), null);
+  assert.equal(EMAIL_CORE.normalizeTrustedClientIp('example.com'), null);
+  assert.equal(EMAIL_CORE.normalizeTrustedClientIp('999.1.1.1'), null);
+  assert.equal(EMAIL_CORE.normalizeTrustedClientIp(null), null);
+});
+
+test('IP rate-limit hashes are stable, keyed, and pseudonymous', async () => {
+  const secret = 'a-long-test-secret-that-is-not-real';
+  const first = await EMAIL_CORE.hashIpForRateLimit('203.0.113.8', secret);
+  const same = await EMAIL_CORE.hashIpForRateLimit('203.0.113.8', secret);
+  const otherIp = await EMAIL_CORE.hashIpForRateLimit('203.0.113.9', secret);
+  const otherSecret = await EMAIL_CORE.hashIpForRateLimit('203.0.113.8', 'a-different-long-test-secret');
+  assert.match(first, /^[a-f0-9]{64}$/);
+  assert.equal(first, same);
+  assert.notEqual(first, otherIp);
+  assert.notEqual(first, otherSecret);
+  assert.doesNotMatch(first, /203\\.0\\.113\\.8/);
 });
 
 test('Resend testing-domain rejection is configuration-blocked without retry', async () => {
