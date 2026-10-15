@@ -12,7 +12,7 @@ const allowedOrigins = new Set([
   "http://localhost:3030",
   "http://127.0.0.1:3030",
   "http://localhost:5500",
-  "https://waitlist.sirvinci.com",
+  "https://waitlist.sirvincistudio.com",
   "https://sirvinciacademy.com",
   "https://www.sirvinciacademy.com",
   "https://sirvinciacademy-waitlist.vercel.app",
@@ -56,6 +56,7 @@ interface RecoveryCore {
   classifyProviderStatus(status: number): string;
   retryDelaySeconds(attemptCount: number): number;
   constantTimeEquals(left: string, right: string): boolean;
+  extractSenderEmail(from: string): string;
   isSenderConfigurationValid(apiKey: string, fromEmail: string): boolean;
   isSenderDomainVerified(apiKey: string, fromEmail: string, fetchImpl: typeof fetch): Promise<boolean>;
   getCorsHeaders(origin: string | null | undefined, allowedOrigins: Set<string>): Record<string, string>;
@@ -144,11 +145,45 @@ async function registerWaitlist(body: Partial<EmailRequest>, origin?: string | n
   // do not synchronously dispatch. The batched worker avoids response-time
   // membership side channels and processes due jobs automatically.
   try {
-    await callServiceRpc<EmailJob[]>("enqueue_waitlist_email", { p_email: email });
+    const queuedJobs = await callServiceRpc<EmailJob[]>("enqueue_waitlist_email", { p_email: email });
+    let queuedJob = Array.isArray(queuedJobs) ? queuedJobs[0] : undefined;
+
+    // If an older registration has no outbox history, enqueue_waitlist_email
+    // marks it uncertain rather than assuming whether a historical email was
+    // sent. A fresh form submission is an explicit request to try again, so
+    // route it through the normal resend rate limits and idempotency safeguards.
+    if (queuedJob?.status === "uncertain") {
+      const senderVerified = await isConfiguredSenderDomainVerified(
+        Deno.env.get("RESEND_API_KEY")?.trim() || "",
+        Deno.env.get("RESEND_FROM_EMAIL")?.trim() || "",
+      );
+      const resendJobs = await callServiceRpc<Array<EmailJob & { outcome: string }>>(
+        "request_waitlist_email_resend",
+        {
+          p_email: email,
+          p_sender_verified: senderVerified,
+          p_request_id: crypto.randomUUID(),
+        },
+      );
+      queuedJob = Array.isArray(resendJobs) ? resendJobs[0] : undefined;
+    }
+
+    // Dispatch immediately instead of making the student wait for cron.
+    // The scheduled worker remains the safety net for retries and failures.
+    if (queuedJob && ["pending", "retryable"].includes(queuedJob.status)) {
+      const claimedJobs = await callServiceRpc<EmailJob[]>("claim_waitlist_email_jobs", {
+        p_job_ids: [queuedJob.job_id],
+        p_include_blocked: false,
+        p_batch_size: 1,
+      });
+      if (claimedJobs.length > 0) {
+        await processJobs(claimedJobs);
+      }
+    }
   } catch (error) {
     // The registration is already committed; dispatch failure must not turn
     // that into a false registration error. The scheduled worker will recover.
-    console.error("[Email Recovery] Registration dispatch deferred:", error instanceof Error ? error.message : "unknown error");
+    console.error("[Email Recovery] Immediate registration dispatch deferred:", error instanceof Error ? error.message : "unknown error");
   }
 
   return buildSuccessResponse({ ok: true, status: "received" }, origin);
@@ -158,7 +193,7 @@ async function requestConfirmationResend(email: string, requestId: string, origi
   const apiKey = Deno.env.get("RESEND_API_KEY")?.trim() || "";
   const fromEmail = Deno.env.get("RESEND_FROM_EMAIL")?.trim() || "";
   const senderVerified = await isConfiguredSenderDomainVerified(apiKey, fromEmail);
-  await callServiceRpc<Array<EmailJob & { outcome: string }>>(
+  const resendJobs = await callServiceRpc<Array<EmailJob & { outcome: string }>>(
     "request_waitlist_email_resend",
     {
       p_email: email,
@@ -166,6 +201,28 @@ async function requestConfirmationResend(email: string, requestId: string, origi
       p_request_id: requestId,
     }
   );
+
+  // Dispatch eligible resend jobs immediately. The cron worker remains the
+  // recovery path if this request cannot claim/process the job.
+  try {
+    const queuedJob = Array.isArray(resendJobs) ? resendJobs[0] : undefined;
+    if (queuedJob && ["pending", "retryable"].includes(queuedJob.status)) {
+      const claimedJobs = await callServiceRpc<EmailJob[]>("claim_waitlist_email_jobs", {
+        p_job_ids: [queuedJob.job_id],
+        p_include_blocked: false,
+        p_batch_size: 1,
+      });
+      if (claimedJobs.length > 0) {
+        await processJobs(claimedJobs);
+      }
+    }
+  } catch (error) {
+    console.error(
+      "[Email Recovery] Immediate resend dispatch deferred:",
+      error instanceof Error ? error.message : "unknown error",
+    );
+  }
+
   // Deliberately disclose neither registration existence nor queue/provider
   // state. This is the same response for a new, duplicate, unknown, and
   // rate-limited address.
@@ -173,7 +230,8 @@ async function requestConfirmationResend(email: string, requestId: string, origi
 }
 
 async function isConfiguredSenderDomainVerified(apiKey: string, fromEmail: string): Promise<boolean> {
-  const domain = fromEmail.trim().split("@").pop()?.toLowerCase() || "";
+  const pureEmail = WAITLIST_EMAIL_CORE.extractSenderEmail ? WAITLIST_EMAIL_CORE.extractSenderEmail(fromEmail) : fromEmail;
+  const domain = pureEmail.trim().split("@").pop()?.toLowerCase() || "";
   if (senderVerificationCache?.domain === domain && Date.now() - senderVerificationCache.checkedAt < 60_000) {
     return senderVerificationCache.verified;
   }
