@@ -1,11 +1,11 @@
 # SIRVINCI ACADEMY — Waitlist Landing Page
 
-> Mobile-first, high-impact dark mode waitlist landing page for **Sirvinci Academy** by **Sirvinci Creative Studio**.
+> Mobile-first waitlist landing page for **Sirvinci Academy** by **Sirvinci Creative Studio**, using the strict brand palette `#010070`, `#f4f4f4`, and `#fef457`.
 
 ---
 
 ## 🌟 Highlights
-- **Design System**: Sleek Dark Mode (`#0A0A0A` base, `#141414` elevated surfaces) with electric royal brand blue (`#2F76FF`) accents.
+- **Design System**: Strict Sirvinci palette: blue `#010070`, off-white `#f4f4f4`, and yellow `#fef457`. All actionable buttons use yellow with blue text.
 - **Mobile-First Responsive Layout**: Optimized for 375px+ smartphones up to 4K desktop screens with native vector typography and zero raster blur.
 - **Backend & Database**: Fully connected to **Supabase** (PostgreSQL) with Row Level Security (RLS) enabled. Captures full names, emails, design experience, goals, reasons, payment preferences, and expected pricing in real-time.
 - **Tactile Micro-Interactions**: Ambient glowing orbs, smooth marquee ticker, animated FAQ accordion, interactive radio cards, and inline animated checkmark confirmation.
@@ -78,3 +78,11 @@ The recovery outbox deliberately does not backfill existing registrations: their
 
 ## 📄 License & Copyright
 © 2026 Sirvinci Creative Studio. All rights reserved.
+
+
+## International pricing research and brand rules
+
+- The waitlist requires country of residence and a pricing response. A response is either a positive numeric amount plus a three-letter currency code, or the explicit “I'm not sure yet” option.
+- `expected_cost_amount` and `expected_cost_currency` support calculations within each currency; `country_of_residence` supports market segmentation; `pricing_unsure` records uncertainty. The legacy `expected_cost` text field remains for readable exports and historical responses.
+- Never calculate one average across different currencies without an explicit exchange-rate methodology.
+- Brand palette: blue `#010070`, off-white `#f4f4f4`, yellow `#fef457`. All buttons use yellow with blue text.
