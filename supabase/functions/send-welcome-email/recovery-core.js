@@ -80,17 +80,92 @@
     return Number.isFinite(createdTime) && now - createdTime < 23 * 60 * 60 * 1000;
   }
 
-  function evaluateResendThrottle({ lastRequestedAt, windowStartedAt, requestCount }, now = Date.now()) {
+  function evaluateResendThrottle({
+    lastRequestedAt,
+    minuteStartedAt,
+    minuteCount,
+    hourStartedAt,
+    hourCount,
+    windowStartedAt,
+    requestCount
+  }, now = Date.now()) {
     const lastRequest = Date.parse(lastRequestedAt || '');
-    const windowStart = Date.parse(windowStartedAt || '');
-    const count = Number(requestCount) || 0;
-    if (Number.isFinite(lastRequest) && now - lastRequest < 15 * 60 * 1000) {
+    const minuteStart = Date.parse(minuteStartedAt || '');
+    const hourStart = Date.parse(hourStartedAt || '');
+    const dayStart = Date.parse(windowStartedAt || '');
+    const minutes = Number(minuteCount) || 0;
+    const hours = Number(hourCount) || 0;
+    const days = Number(requestCount) || 0;
+
+    if (Number.isFinite(lastRequest) && now - lastRequest < 10 * 1000) {
       return { allowed: false, reason: 'cooldown' };
     }
-    if (Number.isFinite(windowStart) && now - windowStart < 24 * 60 * 60 * 1000 && count >= 3) {
+    if (Number.isFinite(minuteStart) && now - minuteStart < 60 * 1000 && minutes >= 3) {
+      return { allowed: false, reason: 'minute_limit' };
+    }
+    if (Number.isFinite(hourStart) && now - hourStart < 60 * 60 * 1000 && hours >= 10) {
+      return { allowed: false, reason: 'hour_limit' };
+    }
+    if (Number.isFinite(dayStart) && now - dayStart < 24 * 60 * 60 * 1000 && days >= 20) {
       return { allowed: false, reason: 'daily_limit' };
     }
-    return { allowed: true, nextCount: Number.isFinite(windowStart) && now - windowStart < 24 * 60 * 60 * 1000 ? count + 1 : 1 };
+
+    return {
+      allowed: true,
+      nextMinuteCount: Number.isFinite(minuteStart) && now - minuteStart < 60 * 1000 ? minutes + 1 : 1,
+      nextHourCount: Number.isFinite(hourStart) && now - hourStart < 60 * 60 * 1000 ? hours + 1 : 1,
+      nextDayCount: Number.isFinite(dayStart) && now - dayStart < 24 * 60 * 60 * 1000 ? days + 1 : 1
+    };
+  }
+
+  function normalizeTrustedClientIp(value) {
+    if (typeof value !== 'string') return null;
+    const ip = value.trim();
+    if (!ip || ip.length > 45 || /[,\\s%]/.test(ip)) return null;
+
+    const octets = ip.split('.');
+    if (octets.length === 4 && octets.every((part) => /^\\d{1,3}$/.test(part) && Number(part) >= 0 && Number(part) <= 255)) {
+      return octets.map((part) => String(Number(part))).join('.');
+    }
+
+    // URL parsing validates IPv6 syntax without accepting hostnames or ports.
+    if (!ip.includes(':') || !/^[0-9a-fA-F:.]+$/.test(ip)) return null;
+    try {
+      const parsed = new URL(`http://[${ip}]/`);
+      if (!parsed.hostname.startsWith('[') || !parsed.hostname.endsWith(']')) return null;
+      return ip.toLowerCase();
+    } catch {
+      return null;
+    }
+  }
+
+  async function hashIpForRateLimit(ip, secret) {
+    if (typeof ip !== 'string' || !ip || typeof secret !== 'string' || secret.length < 16) {
+      throw new Error('IP rate-limit hashing configuration is invalid.');
+    }
+    const encoder = new TextEncoder();
+    const rootKey = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    // Purpose-specific derivation separates IP pseudonymisation from other uses.
+    const derivedBytes = await crypto.subtle.sign(
+      'HMAC',
+      rootKey,
+      encoder.encode('sirvinci-waitlist-ip-rate-limit-v1')
+    );
+    const ipKey = await crypto.subtle.importKey(
+      'raw',
+      derivedBytes,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    const digest = new Uint8Array(await crypto.subtle.sign('HMAC', ipKey, encoder.encode(ip)));
+    return Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
   }
 
   async function sendClaimedJob(job, options) {
@@ -188,6 +263,8 @@
     isSenderDomainVerified,
     isWithinIdempotencyWindow,
     evaluateResendThrottle,
+    normalizeTrustedClientIp,
+    hashIpForRateLimit,
     sendClaimedJob
   };
 
