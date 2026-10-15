@@ -5,6 +5,18 @@ on:
     branches: [main]
     paths:
       - 'main.js'
+      - 'index.html'
+      - 'styles.css'
+      - 'site.webmanifest'
+      - 'README.md'
+      - 'docs/**'
+      - 'supabase/reports/**'
+      - 'index.html'
+      - 'styles.css'
+      - 'site.webmanifest'
+      - 'README.md'
+      - 'docs/**'
+      - 'supabase/reports/**'
       - 'supabase/functions/send-welcome-email/**'
       - 'supabase/migrations/**'
       - 'tests/**'
