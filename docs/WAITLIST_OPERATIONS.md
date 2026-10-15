@@ -45,7 +45,7 @@ The current waitlist stores completed registrations, not page views or traffic-s
 ## Operational safeguards
 
 - Keep `public.waitlist` and email-job data private to authorised staff; do not grant the browser direct SELECT access.
-- Per-email resend controls: 10-second cooldown; up to 3 requests per rolling minute, 10 per rolling hour, and 20 per rolling 24 hours.
+- Per-email resend controls: 10-second cooldown; up to 3 requests in the current minute window, 10 in the current hour window, and 20 in the current 24-hour window.
 - The Edge Function also applies a separate per-trusted-IP budget when Supabase provides a valid gateway IP header: 15 per minute, 60 per hour, 200 per rolling day. Raw IPs are transformed into keyed HMAC hashes before they reach the database. If the trusted IP header or secret is unavailable, that layer logs a warning and fails open so legitimate registration is not blocked; per-email controls remain.
 - Public resend responses do not disclose whether an email address is registered. Do not add sensitive recipient details to logs.
 - The email worker runs every five minutes as a recovery safety net; first dispatch is attempted immediately.
