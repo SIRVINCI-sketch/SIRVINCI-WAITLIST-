@@ -1,42 +1,44 @@
 /* ==========================================================================
    SIRVINCI ACADEMY — Official Platform Stylesheet
-   Theme: Dark Mode Only | Base: #0A0A0A | Surface: #161616
-   Primary Brand Accent: Royal Electric Blue (#2F76FF)
+   Theme: Sirvinci Brand Palette | Blue: #010070 | Off-white: #f4f4f4 | Yellow: #fef457
+   Primary Brand Blue (#010070); CTA Yellow (#fef457)
    Typography: Space Grotesk & Inter
    ========================================================================== */
 
 /* --- 1. DESIGN TOKENS & CSS VARIABLES --- */
 :root {
   /* Color System */
-  --bg-base: #0A0A0A;
-  --bg-surface: #141414;
-  --bg-surface-elevated: #1B1B1B;
-  --bg-surface-glass: rgba(20, 20, 20, 0.82);
+  --bg-base: #f4f4f4;
+  --color-primary: #010070;
+  --color-button: #fef457;
+  --bg-surface: #f4f4f4;
+  --bg-surface-elevated: #f4f4f4;
+  --bg-surface-glass: rgba(244, 244, 244, 0.82);
 
   /* Primary Brand Accent: Royal Electric Blue */
-  --color-accent: #2F76FF;
-  --color-accent-hover: #4C8BFF;
-  --color-accent-active: #1A60E8;
-  --color-accent-glow: rgba(47, 118, 255, 0.32);
-  --color-accent-glow-strong: rgba(47, 118, 255, 0.55);
-  --color-accent-subtle: rgba(47, 118, 255, 0.12);
-  --color-accent-border: rgba(47, 118, 255, 0.38);
+  --color-accent: #010070;
+  --color-accent-hover: #010070;
+  --color-accent-active: #010070;
+  --color-accent-glow: rgba(1, 0, 112, 0.32);
+  --color-accent-glow-strong: rgba(1, 0, 112, 0.55);
+  --color-accent-subtle: rgba(1, 0, 112, 0.12);
+  --color-accent-border: rgba(1, 0, 112, 0.38);
 
   /* Text & Content */
-  --text-primary: #F5F5F5;
-  --text-secondary: #A3A3A3;
-  --text-muted: #737373;
-  --text-on-accent: #FFFFFF;
+  --text-primary: #010070;
+  --text-secondary: #010070;
+  --text-muted: #010070;
+  --text-on-accent: #f4f4f4;
 
   /* Hairline Borders */
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(255, 255, 255, 0.18);
-  --border-active: rgba(47, 118, 255, 0.5);
+  --border-subtle: rgba(1, 0, 112, 0.12);
+  --border-hover: rgba(1, 0, 112, 0.25);
+  --border-active: rgba(1, 0, 112, 0.5);
 
   /* Elevation Shadows */
-  --shadow-card: 0 10px 36px rgba(0, 0, 0, 0.55);
+  --shadow-card: 0 10px 36px rgba(1, 0, 112, 0.55);
   --shadow-glow: 0 0 35px var(--color-accent-glow);
-  --shadow-glow-lg: 0 0 65px rgba(47, 118, 255, 0.22);
+  --shadow-glow-lg: 0 0 65px rgba(1, 0, 112, 0.22);
 
   /* Typography */
   --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -121,7 +123,7 @@ button, input, select {
   pointer-events: none;
   z-index: 0;
   opacity: 0.025;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.8) 1px, transparent 0);
+  background-image: radial-gradient(rgba(244, 244, 244, 0.8) 1px, transparent 0);
   background-size: 24px 24px;
 }
 
@@ -133,8 +135,8 @@ button, input, select {
   opacity: 0.035;
   background-size: 48px 48px;
   background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.35) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.35) 1px, transparent 1px);
+    linear-gradient(to right, rgba(244, 244, 244, 0.35) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(244, 244, 244, 0.35) 1px, transparent 1px);
 }
 
 .ambient-orb {
@@ -151,7 +153,7 @@ button, input, select {
   transform: translateX(-50%);
   width: min(700px, 92vw);
   height: min(480px, 65vh);
-  background: radial-gradient(circle, rgba(47, 118, 255, 0.22) 0%, rgba(47, 118, 255, 0.05) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(1, 0, 112, 0.22) 0%, rgba(1, 0, 112, 0.05) 50%, transparent 70%);
   animation: orbFloat 12s ease-in-out infinite alternate;
 }
 
@@ -231,7 +233,7 @@ button, input, select {
   text-decoration: none;
 }
 
-/* Primary CTA Button (Brand Blue) */
+/* Primary CTA Button (Brand Yellow) */
 .btn-primary {
   background-color: var(--color-accent);
   color: var(--text-on-accent);
@@ -314,7 +316,7 @@ button, input, select {
 
 .navbar {
   height: var(--nav-height);
-  background-color: rgba(10, 10, 10, 0.88);
+  background-color: rgba(244, 244, 244, 0.88);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border-subtle);
@@ -322,9 +324,9 @@ button, input, select {
 }
 
 .navbar.is-scrolled {
-  background-color: rgba(10, 10, 10, 0.96);
-  border-bottom-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  background-color: rgba(244, 244, 244, 0.96);
+  border-bottom-color: rgba(244, 244, 244, 0.12);
+  box-shadow: 0 8px 24px rgba(1, 0, 112, 0.6);
 }
 
 .nav-container {
@@ -371,7 +373,7 @@ button, input, select {
   font-weight: 500;
   letter-spacing: 0.04em;
   padding-left: 12px;
-  border-left: 1px solid rgba(255, 255, 255, 0.16);
+  border-left: 1px solid rgba(244, 244, 244, 0.16);
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -400,7 +402,7 @@ button, input, select {
   font-size: 1.15rem;
   font-weight: 800;
   letter-spacing: -0.015em;
-  color: #FFFFFF;
+  color: #f4f4f4;
   line-height: 0.92;
 }
 
@@ -409,7 +411,7 @@ button, input, select {
   font-size: 0.52rem;
   font-weight: 700;
   letter-spacing: 0.38em;
-  color: #E2E2E2;
+  color: #f4f4f4;
   line-height: 1;
   margin-top: 3px;
   text-indent: 0.38em;
@@ -557,7 +559,7 @@ button, input, select {
 /* --- 8. MARQUEE / TICKER STRIP --- */
 .marquee-strip {
   width: 100%;
-  background-color: #101010;
+  background-color: #f4f4f4;
   border-top: 1px solid var(--border-subtle);
   border-bottom: 1px solid var(--border-subtle);
   padding: 14px 0;
@@ -667,7 +669,7 @@ button, input, select {
 .feature-card:hover {
   transform: translateY(-4px);
   border-color: var(--color-accent-border);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), 0 0 20px var(--color-accent-subtle);
+  box-shadow: 0 12px 30px rgba(1, 0, 112, 0.4), 0 0 20px var(--color-accent-subtle);
 }
 
 .feature-icon-box {
@@ -736,7 +738,7 @@ button, input, select {
 .who-card:hover {
   transform: translateY(-3px);
   border-color: var(--color-accent-border);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 10px 28px rgba(1, 0, 112, 0.4);
 }
 
 .who-tag-badge {
@@ -810,8 +812,8 @@ button, input, select {
   width: 100%;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(244, 244, 244, 0.1);
+  box-shadow: 0 20px 48px -12px rgba(1, 0, 112, 0.75);
 }
 
 .about-img {
@@ -832,10 +834,10 @@ button, input, select {
   bottom: 14px;
   left: 14px;
   right: 14px;
-  background: rgba(10, 15, 25, 0.85);
+  background: rgba(244, 244, 244, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(244, 244, 244, 0.12);
   border-radius: 12px;
   padding: 10px 14px;
   z-index: 2;
@@ -845,7 +847,7 @@ button, input, select {
   font-family: var(--font-display);
   font-size: 1rem;
   font-weight: 700;
-  color: #ffffff;
+  color: #f4f4f4;
   line-height: 1.2;
 }
 
@@ -865,10 +867,10 @@ button, input, select {
 }
 
 .instructor-stat-card {
-  background: rgba(18, 22, 34, 0.75);
+  background: rgba(244, 244, 244, 0.75);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(47, 118, 255, 0.18);
+  border: 1px solid rgba(1, 0, 112, 0.18);
   border-radius: 14px;
   padding: 16px 14px;
   text-align: center;
@@ -877,14 +879,14 @@ button, input, select {
 
 .instructor-stat-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(47, 118, 255, 0.4);
+  border-color: rgba(1, 0, 112, 0.4);
 }
 
 .instructor-stat-card .stat-number {
   font-family: var(--font-display);
   font-size: clamp(1.6rem, 2.5vw, 2rem);
   font-weight: 800;
-  color: #38b6ff;
+  color: #010070;
   line-height: 1.1;
   letter-spacing: -0.02em;
 }
@@ -922,7 +924,7 @@ button, input, select {
 
 .about-body em {
   font-style: normal;
-  color: #ffffff;
+  color: #f4f4f4;
 }
 
 /* Skill Tags matching reference */
@@ -938,9 +940,9 @@ button, input, select {
   align-items: center;
   font-size: 0.78rem;
   font-weight: 600;
-  color: #38b6ff;
-  background: rgba(47, 118, 255, 0.08);
-  border: 1px solid rgba(47, 118, 255, 0.22);
+  color: #010070;
+  background: rgba(1, 0, 112, 0.08);
+  border: 1px solid rgba(1, 0, 112, 0.22);
   border-radius: 9999px;
   padding: 6px 14px;
   letter-spacing: 0.01em;
@@ -948,8 +950,8 @@ button, input, select {
 }
 
 .skill-tag:hover {
-  background: rgba(47, 118, 255, 0.16);
-  border-color: rgba(47, 118, 255, 0.45);
+  background: rgba(1, 0, 112, 0.16);
+  border-color: rgba(1, 0, 112, 0.45);
   transform: translateY(-1px);
 }
 
@@ -968,7 +970,7 @@ button, input, select {
   border: 1px solid var(--color-accent-border);
   border-radius: var(--radius-lg);
   padding: clamp(28px, 6vw, 56px);
-  box-shadow: 0 0 50px var(--color-accent-subtle), 0 16px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 50px var(--color-accent-subtle), 0 16px 40px rgba(1, 0, 112, 0.6);
   position: relative;
   overflow: hidden;
 }
@@ -1069,7 +1071,7 @@ button, input, select {
   outline: none;
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px var(--color-accent-subtle);
-  background-color: #0E0E0E;
+  background-color: #f4f4f4;
 }
 
 /* Custom Select Chevron */
@@ -1091,8 +1093,8 @@ button, input, select {
 }
 
 .form-select option {
-  background-color: #161616;
-  color: #F5F5F5;
+  background-color: #f4f4f4;
+  color: #010070;
 }
 
 /* Radio Custom Stack */
@@ -1175,7 +1177,7 @@ button, input, select {
 .field-error-msg {
   display: none;
   font-size: 0.82rem;
-  color: #FF5E5E;
+  color: #010070;
   margin-top: 6px;
   font-weight: 500;
 }
@@ -1186,8 +1188,8 @@ button, input, select {
 
 .form-group.has-error .form-input,
 .form-group.has-error .form-select {
-  border-color: #FF5E5E;
-  box-shadow: 0 0 0 3px rgba(255, 94, 94, 0.15);
+  border-color: #010070;
+  box-shadow: 0 0 0 3px rgba(1, 0, 112, 0.15);
 }
 
 /* Inline Success State */
@@ -1329,8 +1331,8 @@ button, input, select {
 }
 
 .recovery-input-group.has-error .recovery-email-input {
-  border-color: #FF5E5E;
-  box-shadow: 0 0 0 3px rgba(255, 94, 94, 0.15);
+  border-color: #010070;
+  box-shadow: 0 0 0 3px rgba(1, 0, 112, 0.15);
 }
 
 .recovery-submit-btn {
@@ -1378,7 +1380,7 @@ button, input, select {
 .success-whatsapp-cta {
   margin-top: 28px;
   padding-top: 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(244, 244, 244, 0.08);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1387,17 +1389,17 @@ button, input, select {
 
 .whatsapp-prompt {
   font-size: 0.95rem;
-  color: #E5E5E5;
+  color: #f4f4f4;
   margin: 0;
   font-weight: 500;
   text-align: center;
 }
 
 .btn-whatsapp {
-  background-color: #25D366;
-  color: #FFFFFF;
-  border-color: #25D366;
-  box-shadow: 0 4px 20px rgba(37, 211, 102, 0.35);
+  background-color: #fef457;
+  color: #f4f4f4;
+  border-color: #fef457;
+  box-shadow: 0 4px 20px rgba(254, 244, 87, 0.35);
   font-weight: 700;
   gap: 10px;
   padding: 15px 30px;
@@ -1410,11 +1412,11 @@ button, input, select {
 }
 
 .btn-whatsapp:hover {
-  background-color: #1EBE5D;
-  border-color: #1EBE5D;
+  background-color: #fef457;
+  border-color: #fef457;
   transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 8px 28px rgba(37, 211, 102, 0.5);
-  color: #FFFFFF;
+  box-shadow: 0 8px 28px rgba(254, 244, 87, 0.5);
+  color: #f4f4f4;
 }
 
 .btn-whatsapp:active {
@@ -1483,7 +1485,7 @@ button, input, select {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(244, 244, 244, 0.05);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1580,7 +1582,7 @@ button, input, select {
 
 /* --- 16. FOOTER --- */
 .footer {
-  background-color: #080808;
+  background-color: #f4f4f4;
   border-top: 1px solid var(--border-subtle);
   padding: 48px 0 36px;
   position: relative;
@@ -1611,7 +1613,7 @@ button, input, select {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: #141414;
+  background: #f4f4f4;
   border: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
@@ -1748,3 +1750,9 @@ button, input, select {
     font-size: 2rem;
   }
 }
+
+/* Brand enforcement: every actionable button is yellow with blue text. */
+button, .btn, [role="button"] { background-color: #fef457 !important; color: #010070 !important; border-color: #fef457 !important; }
+button:hover, .btn:hover, [role="button"]:hover, button:focus-visible, .btn:focus-visible, [role="button"]:focus-visible { background-color: #fef457 !important; color: #010070 !important; border-color: #fef457 !important; }
+.conditional-fields[hidden] { display: none !important; }
+.form-help-text { color: #010070; font-size: 0.9rem; line-height: 1.55; margin: 0 0 14px; }
