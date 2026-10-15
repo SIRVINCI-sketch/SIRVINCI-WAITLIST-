@@ -121,10 +121,10 @@
   function normalizeTrustedClientIp(value) {
     if (typeof value !== 'string') return null;
     const ip = value.trim();
-    if (!ip || ip.length > 45 || /[,\\s%]/.test(ip)) return null;
+    if (!ip || ip.length > 45 || /[,\s%]/.test(ip)) return null;
 
     const octets = ip.split('.');
-    if (octets.length === 4 && octets.every((part) => /^\\d{1,3}$/.test(part) && Number(part) >= 0 && Number(part) <= 255)) {
+    if (octets.length === 4 && octets.every((part) => /^\d{1,3}$/.test(part) && Number(part) >= 0 && Number(part) <= 255)) {
       return octets.map((part) => String(Number(part))).join('.');
     }
 
