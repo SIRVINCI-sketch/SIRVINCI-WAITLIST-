@@ -16,9 +16,14 @@
 ```text
 ├── index.html        # Main semantic landing page
 ├── styles.css        # Vanilla CSS design tokens & layout
-├── main.js           # Supabase REST client & form validator
+├── main.js           # Supabase Edge Function client and form validation
 ├── assets/           # High-resolution logos, mockups, and instructor portrait
-├── serve.ps1         # Native PowerShell local static web server (no dependencies required)
+├── docs/WAITLIST_OPERATIONS.md
+├── supabase/migrations/
+├── supabase/reports/waitlist-period-end.sql
+├── tests/waitlist-flow.test.js
+├── tests/waitlist-rate-limit.integration.sql
+├── serve.ps1         # Native PowerShell local static web server
 ├── serve.js          # Node.js local web server
 └── README.md         # Documentation
 ```
@@ -61,9 +66,9 @@ The browser submits to the `send-welcome-email` Edge Function. The function uses
 
 New registrations atomically create a private email outbox job inside the registration RPC transaction. The registration table has a stable UUID primary key and a unique case/whitespace-normalized email constraint. The Edge Function sends using the `RESEND_API_KEY` and `RESEND_FROM_EMAIL` secrets; the database outbox tracks accepted, retryable, blocked, failed, and uncertain outcomes. The scheduled worker runs every five minutes and only includes blocked jobs in recovery after Resend reports the configured sender domain as verified. Recovery requests are authenticated with `EMAIL_RECOVERY_SECRET`, mirrored in Supabase Vault for the scheduled job.
 
-Students can explicitly request a confirmation resend from the saved-registration screen. Requests reuse an idempotency UUID and are limited per email to a 10-second cooldown, 3 requests per rolling minute, 10 per rolling hour, and 20 per rolling 24 hours. The endpoint also uses a generic acknowledgment that does not disclose whether an email address is registered. These per-email controls are complemented by database row locks, idempotent job handling, and a gateway-IP limiter (15 requests/minute, 60/hour, 200/day) that stores only keyed HMAC hashes and cleans inactive hashes after seven days. The IP layer uses Supabase's gateway-populated `cf-connecting-ip` header and fails open if trusted IP data or the HMAC secret is unavailable; per-email protection remains active. Legacy registrations without outbox history are held as uncertain until the student requests recovery; no historical registrations are automatically resent.
+Students can explicitly request a confirmation resend from the saved-registration screen. Requests reuse an idempotency UUID and are limited per email to a 10-second cooldown, 3 requests in the current minute window, 10 in the current hour window, and 20 in the current 24-hour window. The endpoint also uses a generic acknowledgment that does not disclose whether an email address is registered. These per-email controls are complemented by database row locks, idempotent job handling, and a gateway-IP limiter (15 requests/minute, 60/hour, 200/day) that stores only keyed HMAC hashes and cleans inactive hashes after seven days. The IP layer uses Supabase's gateway-populated `cf-connecting-ip` header and fails open if trusted IP data or the HMAC secret is unavailable; per-email protection remains active. Legacy registrations without outbox history are held as uncertain until the student requests recovery; no historical registrations are automatically resent.
 
-Apply the migrations in `supabase/migrations/` to a linked Supabase project. Use `docs/WAITLIST_OPERATIONS.md` and `supabase/reports/waitlist-period-end.sql` to inspect counts, weekly sign-ups, audience answers, and email queue health without manually counting rows. These queries do not change data. Run isolated logic tests with `node --test tests/waitlist-flow.test.js`; run the rollback-only live schema/queue integration test with `npx supabase db query --linked --file tests/waitlist-recovery.integration.sql`.
+Apply the migrations in `supabase/migrations/` to a linked Supabase project. Use `docs/WAITLIST_OPERATIONS.md` and `supabase/reports/waitlist-period-end.sql` to inspect counts, weekly sign-ups, audience answers, and email queue health without manually counting rows. These queries do not change data. Run automated logic tests with `node --test tests/waitlist-flow.test.js`. The rollback-only database checks can be run with `npx supabase db query --linked --file tests/waitlist-recovery.integration.sql` and `npx supabase db query --linked --file tests/waitlist-rate-limit.integration.sql`.
 
 The recovery outbox deliberately does not backfill existing registrations: their historic email-delivery status is unknown, and automatically resending to all of them could duplicate confirmations. A duplicate submission for a legacy registration without an outbox record is marked uncertain and is not automatically resent. Verify the Resend sender domain and perform a controlled external-recipient test before public launch.
 
