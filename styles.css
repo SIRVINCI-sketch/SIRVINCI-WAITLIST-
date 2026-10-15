@@ -270,6 +270,7 @@ button, input, select {
 .btn-nav {
   background-color: #fef457;
   color: var(--text-on-accent);
+  border-color: #fef457;
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -281,6 +282,7 @@ button, input, select {
 
 .btn-nav:hover {
   background-color: #fef457;
+  border-color: #fef457;
   transform: scale(1.03);
   box-shadow: 0 4px 18px var(--color-accent-glow);
 }
@@ -1748,3 +1750,7 @@ button, input, select {
     font-size: 2rem;
   }
 }
+
+/* Preserve the existing conditional-field behavior for the expanded form. */
+.conditional-fields[hidden] { display: none !important; }
+.form-help-text { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.55; margin: 0 0 14px; }
