@@ -19,12 +19,12 @@ const {
 
 test('optional research radio questions do not preselect answers', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  const experienceGroup = html.match(/<div class="form-group" id="group-experience">([\\s\\S]*?)<\\/div>\\s*<\\/div>/);
-  const paymentGroup = html.match(/<div class="form-group" id="group-payment">([\\s\\S]*?)<\\/div>\\s*<\\/div>/);
+  const experienceGroup = html.match(/<div class="form-group" id="group-experience">([\s\S]*?)<\/div>\s*<\/div>/);
+  const paymentGroup = html.match(/<div class="form-group" id="group-payment">([\s\S]*?)<\/div>\s*<\/div>/);
   assert.ok(experienceGroup, 'experience question should exist');
   assert.ok(paymentGroup, 'payment question should exist');
-  assert.doesNotMatch(experienceGroup[1], /type="radio"[^>]*\\bchecked\\b/i);
-  assert.doesNotMatch(paymentGroup[1], /type="radio"[^>]*\\bchecked\\b/i);
+  assert.doesNotMatch(experienceGroup[1], /type="radio"[^>]*\bchecked\b/i);
+  assert.doesNotMatch(paymentGroup[1], /type="radio"[^>]*\bchecked\b/i);
 });
 
 test('basic name and email validation remains stable', () => {
