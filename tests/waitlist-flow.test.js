@@ -124,6 +124,7 @@ test('resend feedback does not promise a delivery time', () => {
   assert.match(message, /request was received/i);
   assert.match(message, /no delivery time is guaranteed/i);
   assert.doesNotMatch(message, /24.?48 hours/i);
+  assert.match(WAITLIST_UTILS.getResendRequestMessage('rate_limited'), /too many requests from this network/i);
 });
 
 test('uncertain registration acknowledgment tells the student a retry is duplicate-safe', () => {
@@ -224,7 +225,7 @@ test('IP rate-limit hashes are stable, keyed, and pseudonymous', async () => {
   assert.equal(first, same);
   assert.notEqual(first, otherIp);
   assert.notEqual(first, otherSecret);
-  assert.doesNotMatch(first, /203\\.0\\.113\\.8/);
+  assert.doesNotMatch(first, /203\.0\.113\.8/);
 });
 
 test('Resend testing-domain rejection is configuration-blocked without retry', async () => {
