@@ -187,9 +187,9 @@ test('resend cooldown and rolling limits match the database policy', () => {
   }, now);
   const allowed = EMAIL_CORE.evaluateResendThrottle({
     ...base,
-    minuteStartedAt: new Date(now - 2 * 60 * 1000).toISOString(),
+    minuteStartedAt: new Date(now - 30 * 1000).toISOString(),
     minuteCount: 1,
-    hourStartedAt: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
+    hourStartedAt: new Date(now - 30 * 60 * 1000).toISOString(),
     hourCount: 1,
     windowStartedAt: new Date(now - 25 * 60 * 60 * 1000).toISOString(),
     requestCount: 20
