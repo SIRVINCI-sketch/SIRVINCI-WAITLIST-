@@ -1,0 +1,34 @@
+name: Waitlist CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'main.js'
+      - 'supabase/functions/send-welcome-email/**'
+      - 'supabase/migrations/**'
+      - 'tests/**'
+      - '.github/workflows/waitlist-ci.yml'
+  pull_request:
+    paths:
+      - 'main.js'
+      - 'supabase/functions/send-welcome-email/**'
+      - 'supabase/migrations/**'
+      - 'tests/**'
+      - '.github/workflows/waitlist-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run waitlist tests
+        run: node --test tests/waitlist-flow.test.js
