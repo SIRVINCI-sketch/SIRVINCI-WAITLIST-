@@ -27,7 +27,7 @@ test('optional research radio questions do not preselect answers', () => {
   assert.doesNotMatch(paymentGroup[1], /type="radio"[^>]*\\bchecked\\b/i);
 });
 
-test('only full name and email are required for the waitlist form', () => {
+test('basic name and email validation remains stable', () => {
   assert.deepEqual(WAITLIST_UTILS.validateRequiredFields({ fullName: '', email: '' }), {
     fullName: 'Please enter your full name.',
     email: 'Please enter a valid email address.'
@@ -536,4 +536,77 @@ test('resend request message for unknown outcome advises retry without promising
   assert.match(msg, /could not confirm/i);
   assert.match(msg, /no new registration was created/i);
   assert.match(msg, /rate-limited/i);
+});
+
+test('validates required country and either an amount or unsure pricing response', () => {
+  const missing = WAITLIST_UTILS.validateRequiredFields({
+    fullName: 'Jane Doe', email: 'jane@example.com', countryOfResidence: '',
+    otherCountry: '', pricingChoice: '', priceAmount: '', currency: '', otherCurrencyCode: ''
+  });
+  assert.ok(missing.countryOfResidence);
+  assert.ok(missing.pricingChoice);
+  const missingAmount = WAITLIST_UTILS.validateRequiredFields({
+    fullName: 'Jane Doe', email: 'jane@example.com', countryOfResidence: 'Nigeria',
+    otherCountry: '', pricingChoice: 'amount', priceAmount: '', currency: '', otherCurrencyCode: ''
+  });
+  assert.ok(missingAmount.priceAmount);
+  assert.ok(missingAmount.currency);
+  assert.deepEqual(WAITLIST_UTILS.validateRequiredFields({
+    fullName: 'Jane Doe', email: 'jane@example.com', countryOfResidence: 'United Kingdom',
+    otherCountry: '', pricingChoice: 'unsure', priceAmount: '', currency: '', otherCurrencyCode: ''
+  }), {});
+});
+test('builds structured international price payloads with numeric amount, currency, and country', () => {
+  const formData = new FormData();
+  formData.set('country_of_residence', 'United Kingdom');
+  formData.set('pricing_choice', 'amount');
+  formData.set('expected_cost_amount', '25');
+  formData.set('expected_cost_currency', 'GBP');
+  assert.deepEqual(buildWaitlistPayload(formData, 'Jane Doe', 'JANE@example.com'), {
+    full_name: 'Jane Doe', email: 'jane@example.com', country_of_residence: 'United Kingdom',
+    pricing_unsure: false, expected_cost_amount: 25, expected_cost_currency: 'GBP', expected_cost: '25 GBP'
+  });
+});
+test('records unsure pricing without inventing an amount or currency', () => {
+  const formData = new FormData();
+  formData.set('country_of_residence', 'Nigeria');
+  formData.set('pricing_choice', 'unsure');
+  assert.deepEqual(buildWaitlistPayload(formData, 'Jane Doe', 'JANE@example.com'), {
+    full_name: 'Jane Doe', email: 'jane@example.com', country_of_residence: 'Nigeria',
+    pricing_unsure: true, expected_cost: 'Not sure yet'
+  });
+});
+test('resolves Other country and currency selections to explicit values', () => {
+  const formData = new FormData();
+  formData.set('country_of_residence', 'Other'); formData.set('country_other', 'Japan');
+  formData.set('pricing_choice', 'amount'); formData.set('expected_cost_amount', '2500');
+  formData.set('expected_cost_currency', 'OTHER'); formData.set('other_currency_code', 'jpy');
+  const payload = buildWaitlistPayload(formData, 'Jane Doe', 'JANE@example.com');
+  assert.equal(payload.country_of_residence, 'Japan');
+  assert.equal(payload.expected_cost_currency, 'JPY');
+  assert.equal(payload.expected_cost, '2500 JPY');
+});
+test('country and structured price controls exist in the static form', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  assert.match(html, /id="country-of-residence"[^>]*required/);
+  assert.ok(html.includes('name="pricing_choice" value="amount"'));
+  assert.ok(html.includes('name="pricing_choice" value="unsure"'));
+  assert.ok(html.includes('name="expected_cost_amount"'));
+  assert.ok(html.includes('name="expected_cost_currency"'));
+});
+test('stylesheet uses only the approved hex colors and enforces yellow buttons', () => {
+  const css = fs.readFileSync(path.join(__dirname, '..', 'styles.css'), 'utf8');
+  const hexColors = [...new Set(css.match(/#[0-9a-fA-F]{3,8}/g) || [])].map(color => color.toLowerCase());
+  assert.deepEqual(hexColors.sort(), ['#010070', '#f4f4f4', '#fef457']);
+  assert.ok(css.includes('background-color: #fef457 !important;'));
+  assert.ok(css.includes('color: #010070 !important;'));
+});
+test('Edge Function validates and forwards structured pricing fields to Supabase', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'supabase/functions/send-welcome-email/index.ts'), 'utf8');
+  const registration = source.slice(source.indexOf('async function registerWaitlist'), source.indexOf('async function requestConfirmationResend'));
+  assert.ok(registration.includes('hasStructuredPricing'));
+  assert.ok(registration.includes('p_country_of_residence:'));
+  assert.ok(registration.includes('p_expected_cost_amount:'));
+  assert.ok(registration.includes('p_expected_cost_currency:'));
+  assert.ok(registration.includes('p_pricing_unsure:'));
 });
