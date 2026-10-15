@@ -152,7 +152,10 @@ async function registerWaitlist(body: Partial<EmailRequest>, origin?: string | n
     // marks it uncertain rather than assuming whether a historical email was
     // sent. A fresh form submission is an explicit request to try again, so
     // route it through the normal resend rate limits and idempotency safeguards.
-    if (queuedJob?.status === "uncertain") {
+    if (queuedJob?.status === "uncertain" || queuedJob?.status === "accepted") {
+      // A repeated form submission is also an explicit request to retry
+      // confirmation when the existing job was already accepted. The resend
+      // RPC enforces per-address cooldowns and daily limits.
       const senderVerified = await isConfiguredSenderDomainVerified(
         Deno.env.get("RESEND_API_KEY")?.trim() || "",
         Deno.env.get("RESEND_FROM_EMAIL")?.trim() || "",
