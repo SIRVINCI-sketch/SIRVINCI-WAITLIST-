@@ -22,19 +22,25 @@ const WAITLIST_UTILS = {
     const normalizedEmail = WAITLIST_UTILS.normalizeEmail(value);
     return typeof normalizedEmail === 'string' && WAITLIST_UTILS.emailRegex.test(normalizedEmail);
   },
-  validateRequiredFields({ fullName, email }) {
+  validateRequiredFields({ fullName, email, countryOfResidence, otherCountry, pricingChoice, priceAmount, currency, otherCurrencyCode }) {
     const errors = {};
     const trimmedFullName = WAITLIST_UTILS.normalizeFullName(fullName);
     const trimmedEmail = WAITLIST_UTILS.normalizeEmail(email);
-
-    if (!trimmedFullName) {
-      errors.fullName = 'Please enter your full name.';
+    if (!trimmedFullName) errors.fullName = 'Please enter your full name.';
+    if (!trimmedEmail || !WAITLIST_UTILS.isValidEmail(trimmedEmail)) errors.email = 'Please enter a valid email address.';
+    if (countryOfResidence !== undefined) {
+      if (!String(countryOfResidence || '').trim()) errors.countryOfResidence = 'Please select your country of residence.';
+      else if (countryOfResidence === 'Other' && !String(otherCountry || '').trim()) errors.otherCountry = 'Please enter your country.';
     }
-
-    if (!trimmedEmail || !WAITLIST_UTILS.isValidEmail(trimmedEmail)) {
-      errors.email = 'Please enter a valid email address.';
+    if (pricingChoice !== undefined) {
+      if (!['amount', 'unsure'].includes(pricingChoice)) errors.pricingChoice = 'Choose an amount or select “not sure yet.”';
+      else if (pricingChoice === 'amount') {
+        const amount = Number(priceAmount);
+        if (!String(priceAmount ?? '').trim() || !Number.isFinite(amount) || amount <= 0 || amount > 999999999) errors.priceAmount = 'Enter an amount greater than zero.';
+        if (!String(currency || '').trim()) errors.currency = 'Please select the currency for your amount.';
+        if (currency === 'OTHER' && !/^[A-Za-z]{3}$/.test(String(otherCurrencyCode || '').trim())) errors.otherCurrencyCode = 'Enter a valid 3-letter currency code.';
+      }
     }
-
     return errors;
   },
   parseJsonMaybe(value) {
@@ -52,11 +58,29 @@ const WAITLIST_UTILS = {
       email: WAITLIST_UTILS.normalizeEmail(emailVal)
     };
 
-    ['canva_experience', 'main_goal', 'stopped_reason', 'payment_pref', 'expected_cost'].forEach((field) => {
+    ['canva_experience', 'main_goal', 'stopped_reason', 'payment_pref'].forEach((field) => {
       const value = (formData.get(field) || '').toString().trim();
       if (value) payload[field] = value;
     });
-
+    const legacyCost = (formData.get('expected_cost') || '').toString().trim();
+    const countryChoice = (formData.get('country_of_residence') || '').toString().trim();
+    const otherCountry = (formData.get('country_other') || '').toString().trim();
+    const pricingChoice = (formData.get('pricing_choice') || '').toString().trim();
+    if (legacyCost && !pricingChoice) payload.expected_cost = legacyCost;
+    if (countryChoice) payload.country_of_residence = countryChoice === 'Other' ? otherCountry : countryChoice;
+    if (pricingChoice === 'unsure') {
+      payload.pricing_unsure = true;
+      payload.expected_cost = 'Not sure yet';
+    } else if (pricingChoice === 'amount') {
+      const amount = Number(formData.get('expected_cost_amount'));
+      const currencyChoice = (formData.get('expected_cost_currency') || '').toString().trim();
+      const otherCurrencyCode = (formData.get('other_currency_code') || '').toString().trim().toUpperCase();
+      const currency = currencyChoice === 'OTHER' ? otherCurrencyCode : currencyChoice;
+      payload.pricing_unsure = false;
+      payload.expected_cost_amount = amount;
+      payload.expected_cost_currency = currency;
+      payload.expected_cost = `${amount} ${currency}`;
+    }
     return payload;
   },
   isDuplicateRegistrationError(response, data) {
@@ -296,7 +320,17 @@ function initWaitlistForm() {
   const fullNameInput = document.getElementById('full-name');
   const emailInput = document.getElementById('email');
   const mainGoalSelect = document.getElementById('main-goal');
-  const expectedCostInput = document.getElementById('expected-cost');
+  const countrySelect = document.getElementById('country-of-residence');
+  const countryOtherInput = document.getElementById('country-other');
+  const countryOtherWrap = document.getElementById('country-other-wrap');
+  const pricingChoiceInputs = Array.from(form.querySelectorAll('input[name="pricing_choice"]'));
+  const pricingAmountFields = document.getElementById('pricing-amount-fields');
+  const expectedCostAmountInput = document.getElementById('expected-cost-amount');
+  const expectedCostCurrencySelect = document.getElementById('expected-cost-currency');
+  const otherCurrencyCodeInput = document.getElementById('other-currency-code');
+  const otherCurrencyWrap = document.getElementById('other-currency-wrap');
+  const pricingChoiceGroup = document.getElementById('group-pricing-choice');
+  const pricingChoiceError = document.getElementById('pricing-choice-error');
   let isSubmitting = false;
   let currentRegistrationEmail = '';
   let currentResendRequestId = null;
@@ -361,11 +395,33 @@ function initWaitlistForm() {
     }
   };
 
-  [fullNameInput, emailInput, mainGoalSelect, expectedCostInput].forEach(input => {
+  const toggleConditionalFields = () => {
+    if (countryOtherWrap) {
+      countryOtherWrap.hidden = !countrySelect || countrySelect.value !== 'Other';
+      if (countryOtherWrap.hidden && countryOtherInput) countryOtherInput.value = '';
+    }
+    const choice = pricingChoiceInputs.find(input => input.checked)?.value || '';
+    if (pricingAmountFields) pricingAmountFields.hidden = choice !== 'amount';
+    if (choice !== 'amount') {
+      if (expectedCostAmountInput) expectedCostAmountInput.value = '';
+      if (expectedCostCurrencySelect) expectedCostCurrencySelect.value = '';
+      if (otherCurrencyCodeInput) otherCurrencyCodeInput.value = '';
+    }
+    if (otherCurrencyWrap) {
+      otherCurrencyWrap.hidden = !expectedCostCurrencySelect || expectedCostCurrencySelect.value !== 'OTHER' || choice !== 'amount';
+      if (otherCurrencyWrap.hidden && otherCurrencyCodeInput) otherCurrencyCodeInput.value = '';
+    }
+  };
+  [fullNameInput, emailInput, mainGoalSelect, countrySelect, countryOtherInput, expectedCostAmountInput, expectedCostCurrencySelect, otherCurrencyCodeInput].forEach(input => {
     if (!input) return;
     input.addEventListener('input', () => clearError(input));
-    input.addEventListener('change', () => clearError(input));
+    input.addEventListener('change', () => { clearError(input); toggleConditionalFields(); });
   });
+  pricingChoiceInputs.forEach(input => input.addEventListener('change', () => {
+    if (pricingChoiceGroup) pricingChoiceGroup.classList.remove('has-error');
+    toggleConditionalFields();
+  }));
+  toggleConditionalFields();
 
   if (resendButton) {
     resendButton.addEventListener('click', async () => {
@@ -409,36 +465,34 @@ function initWaitlistForm() {
 
     const nameVal = fullNameInput ? WAITLIST_UTILS.normalizeFullName(fullNameInput.value) : '';
     const emailVal = emailInput ? WAITLIST_UTILS.normalizeEmail(emailInput.value) : '';
-    const validationErrors = WAITLIST_UTILS.validateRequiredFields({ fullName: nameVal, email: emailVal });
-
-    if (validationErrors.fullName) {
-      setError(fullNameInput, 'full-name-error');
-    } else if (fullNameInput) {
-      clearError(fullNameInput);
-    }
-
-    if (validationErrors.email) {
-      setError(emailInput, 'email-error');
-    } else if (emailInput) {
-      clearError(emailInput);
-    }
-
-    if (mainGoalSelect) {
-      clearError(mainGoalSelect);
-      mainGoalSelect.setAttribute('aria-invalid', 'false');
-    }
-
-    if (expectedCostInput) {
-      clearError(expectedCostInput);
-      expectedCostInput.setAttribute('aria-invalid', 'false');
-    }
-
-    if (validationErrors.fullName || validationErrors.email) {
+    const pricingChoice = pricingChoiceInputs.find(input => input.checked)?.value || '';
+    const countryValue = countrySelect ? countrySelect.value : '';
+    const currencyValue = expectedCostCurrencySelect ? expectedCostCurrencySelect.value : '';
+    const validationErrors = WAITLIST_UTILS.validateRequiredFields({
+      fullName: nameVal, email: emailVal, countryOfResidence: countryValue,
+      otherCountry: countryOtherInput ? countryOtherInput.value : '',
+      pricingChoice, priceAmount: expectedCostAmountInput ? expectedCostAmountInput.value : '',
+      currency: currencyValue, otherCurrencyCode: otherCurrencyCodeInput ? otherCurrencyCodeInput.value : ''
+    });
+    [[fullNameInput, 'full-name-error', validationErrors.fullName],
+      [emailInput, 'email-error', validationErrors.email],
+      [countrySelect, 'country-of-residence-error', validationErrors.countryOfResidence],
+      [countryOtherInput, 'country-other-error', validationErrors.otherCountry],
+      [expectedCostAmountInput, 'expected-cost-amount-error', validationErrors.priceAmount],
+      [expectedCostCurrencySelect, 'expected-cost-currency-error', validationErrors.currency],
+      [otherCurrencyCodeInput, 'other-currency-code-error', validationErrors.otherCurrencyCode]
+    ].forEach(([input, errorId, error]) => {
+      if (error) setError(input, errorId);
+      else if (input) clearError(input);
+    });
+    if (pricingChoiceGroup) pricingChoiceGroup.classList.toggle('has-error', Boolean(validationErrors.pricingChoice));
+    if (pricingChoiceError) pricingChoiceError.textContent = validationErrors.pricingChoice || 'Choose an amount or select “not sure yet.”';
+    if (mainGoalSelect) { clearError(mainGoalSelect); mainGoalSelect.setAttribute('aria-invalid', 'false'); }
+    if (Object.keys(validationErrors).length > 0) {
       const firstInvalid = form.querySelector('.form-group.has-error input, .form-group.has-error select');
       if (firstInvalid) firstInvalid.focus();
       return;
     }
-
     const formData = new FormData(form);
     const payload = WAITLIST_UTILS.buildPayload(formData, nameVal, emailVal);
 
