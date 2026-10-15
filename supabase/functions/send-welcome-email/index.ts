@@ -27,6 +27,10 @@ interface EmailRequest {
   stopped_reason?: string;
   payment_pref?: string;
   expected_cost?: string;
+  country_of_residence?: string;
+  expected_cost_amount?: number | string | null;
+  expected_cost_currency?: string | null;
+  pricing_unsure?: boolean;
   whatsapp_url?: string;
   action?: string;
   request_id?: string;
@@ -186,6 +190,24 @@ async function registerWaitlist(body: Partial<EmailRequest>, origin?: string | n
     return buildSafeErrorResponse(400, "Please provide a valid name and email address.", origin);
   }
 
+  const hasStructuredPricing = Object.prototype.hasOwnProperty.call(body, "country_of_residence")
+    || Object.prototype.hasOwnProperty.call(body, "expected_cost_amount")
+    || Object.prototype.hasOwnProperty.call(body, "expected_cost_currency")
+    || Object.prototype.hasOwnProperty.call(body, "pricing_unsure");
+  if (hasStructuredPricing) {
+    const country = typeof body.country_of_residence === "string" ? body.country_of_residence.trim() : "";
+    const amount = typeof body.expected_cost_amount === "number" ? body.expected_cost_amount
+      : typeof body.expected_cost_amount === "string" && body.expected_cost_amount.trim() ? Number(body.expected_cost_amount) : null;
+    const currency = typeof body.expected_cost_currency === "string" ? body.expected_cost_currency.trim().toUpperCase() : "";
+    const unsure = body.pricing_unsure === true;
+    if (!country || country.length > 100) return buildSafeErrorResponse(400, "Please provide your country of residence.", origin);
+    if (unsure) {
+      if (amount !== null || currency) return buildSafeErrorResponse(400, "Choose either an amount or the unsure option, not both.", origin);
+    } else if (amount === null || !Number.isFinite(amount) || amount <= 0 || amount > 999999999 || !/^[A-Z]{3}$/.test(currency)) {
+      return buildSafeErrorResponse(400, "Please provide a valid amount and 3-letter currency code, or select the unsure option.", origin);
+    }
+  }
+
   await callServiceRpc<string>("register_waitlist", {
     p_full_name: fullName,
     p_email: email,
@@ -194,6 +216,10 @@ async function registerWaitlist(body: Partial<EmailRequest>, origin?: string | n
     p_stopped_reason: body.stopped_reason ?? null,
     p_payment_pref: body.payment_pref ?? null,
     p_expected_cost: body.expected_cost ?? null,
+    p_country_of_residence: body.country_of_residence ?? null,
+    p_expected_cost_amount: body.pricing_unsure === true ? null : body.expected_cost_amount ?? null,
+    p_expected_cost_currency: body.pricing_unsure === true ? null : body.expected_cost_currency ?? null,
+    p_pricing_unsure: body.pricing_unsure === true,
   });
 
   // Ensure older registrations have an explicit uncertain outbox record, but
