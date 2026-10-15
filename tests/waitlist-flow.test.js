@@ -131,15 +131,23 @@ test('duplicate registration statuses map to distinct safe messages without clai
   assert.match(legacy, /older email history is unavailable/i);
 });
 
-test('resend feedback does not promise a delivery time', () => {
+test('post-registration resend feedback uses its own safe recovery message', () => {
+  assert.equal(
+    WAITLIST_UTILS.getPostRegistrationResendMessage('request_received'),
+    "Your request was received. If an eligible registration matches this address, the system will attempt safe recovery when sender settings permit. No new registration is created, and no delivery time is guaranteed."
+  );
+  assert.match(WAITLIST_UTILS.getPostRegistrationResendMessage('request_received'), /no new registration is created/i);
+  assert.match(WAITLIST_UTILS.getPostRegistrationResendMessage('request_received'), /no delivery time is guaranteed/i);
+  assert.doesNotMatch(WAITLIST_UTILS.getPostRegistrationResendMessage('request_received'), /24.?48 hours/i);
+});
+
+test('separate recovery form keeps its own confirmation request message', () => {
   const message = WAITLIST_UTILS.getResendRequestMessage('request_received');
   assert.equal(
     message,
-    "Your request was received. If an eligible registration matches this address, the system will attempt safe recovery when sender settings permit. No new registration is created, and no delivery time is guaranteed."
+    "If you've registered with this email address, we'll try to send your confirmation email again. No delivery time is guaranteed; please check your inbox and spam folder."
   );
-  assert.match(message, /no new registration is created/i);
-  assert.match(message, /no delivery time is guaranteed/i);
-  assert.doesNotMatch(message, /24.?48 hours/i);
+  assert.match(message, /please check your inbox and spam folder/i);
   assert.match(WAITLIST_UTILS.getResendRequestMessage('rate_limited'), /too many requests from this network/i);
 });
 
