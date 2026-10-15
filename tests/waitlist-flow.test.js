@@ -133,7 +133,11 @@ test('duplicate registration statuses map to distinct safe messages without clai
 
 test('resend feedback does not promise a delivery time', () => {
   const message = WAITLIST_UTILS.getResendRequestMessage('request_received');
-  assert.match(message, /if you've registered with this email address/i);
+  assert.equal(
+    message,
+    "Your request was received. If an eligible registration matches this address, the system will attempt safe recovery when sender settings permit. No new registration is created, and no delivery time is guaranteed."
+  );
+  assert.match(message, /no new registration is created/i);
   assert.match(message, /no delivery time is guaranteed/i);
   assert.doesNotMatch(message, /24.?48 hours/i);
   assert.match(WAITLIST_UTILS.getResendRequestMessage('rate_limited'), /too many requests from this network/i);
