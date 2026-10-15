@@ -128,7 +128,7 @@ const WAITLIST_UTILS = {
   },
   getResendRequestMessage(status) {
     if (status === 'request_received') {
-      return "If you've registered with this email address, we'll try to send your confirmation email again. Please check your inbox and spam folder shortly.";
+      return "Your request was received. If you've registered with this email address, we'll try to send your confirmation email again. Delivery time is not guaranteed; please check your inbox and spam folder.";
     }
     if (status === 'rate_limited') {
       return 'Too many requests from this network. Please wait before trying again. Your registration is unchanged.';
