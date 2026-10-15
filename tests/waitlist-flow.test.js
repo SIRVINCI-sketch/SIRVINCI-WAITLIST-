@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const EMAIL_CORE = require('../supabase/functions/send-welcome-email/recovery-core.js');
 
 const {
@@ -14,6 +16,16 @@ const {
   isDuplicateRegistrationError,
   getEmailLifecycleStatus
 } = require('../main.js');
+
+test('optional research radio questions do not preselect answers', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const experienceGroup = html.match(/<div class="form-group" id="group-experience">([\\s\\S]*?)<\\/div>\\s*<\\/div>/);
+  const paymentGroup = html.match(/<div class="form-group" id="group-payment">([\\s\\S]*?)<\\/div>\\s*<\\/div>/);
+  assert.ok(experienceGroup, 'experience question should exist');
+  assert.ok(paymentGroup, 'payment question should exist');
+  assert.doesNotMatch(experienceGroup[1], /type="radio"[^>]*\\bchecked\\b/i);
+  assert.doesNotMatch(paymentGroup[1], /type="radio"[^>]*\\bchecked\\b/i);
+});
 
 test('only full name and email are required for the waitlist form', () => {
   assert.deepEqual(WAITLIST_UTILS.validateRequiredFields({ fullName: '', email: '' }), {
