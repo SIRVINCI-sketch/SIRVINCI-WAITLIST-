@@ -128,7 +128,7 @@ const WAITLIST_UTILS = {
   },
   getResendRequestMessage(status) {
     if (status === 'request_received') {
-      return 'Your request was received. If an eligible registration matches this address, the system will attempt safe recovery when sender settings permit. No new registration is created, and no delivery time is guaranteed.';
+      return "If you've registered with this email address, we'll try to send your confirmation email again. Please check your inbox and spam folder shortly.";
     }
     return 'We could not confirm the request outcome. No new registration was created. You may retry later; repeated requests are rate-limited.';
   },
@@ -370,7 +370,7 @@ function initWaitlistForm() {
           throw new Error('Confirmation request was not acknowledged.');
         }
         if (resendFeedback) {
-          resendFeedback.textContent = WAITLIST_UTILS.getResendRequestMessage(data.status);
+          resendFeedback.innerHTML = `<strong>Request received!</strong><br>${WAITLIST_UTILS.getResendRequestMessage(data.status)}`;
         }
         currentResendRequestId = null;
       } catch (error) {
@@ -483,9 +483,9 @@ function initWaitlistForm() {
       formContentArea.style.display = 'none';
       const successTitle = formSuccess.querySelector('.success-title');
       const successBody = formSuccess.querySelector('.success-body');
-      if (successTitle) successTitle.textContent = 'Registration saved';
+      if (successTitle) successTitle.textContent = "You're on the list!";
       if (successBody) {
-        successBody.textContent = 'Your registration is saved. If this address was already registered, no second registration was added. Email confirmation is handled separately; use the resend action below if needed. No delivery time is guaranteed.';
+        successBody.textContent = "Your registration has been received successfully. We're excited to have you join the Sirvinci Academy community. Keep an eye on your inbox for your confirmation email. If you don't see it, check your spam folder.";
       }
       if (resendFeedback) resendFeedback.textContent = '';
       formSuccess.classList.add('active');
