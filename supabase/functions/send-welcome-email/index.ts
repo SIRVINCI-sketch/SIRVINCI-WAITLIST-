@@ -61,6 +61,8 @@ interface RecoveryCore {
   isSenderDomainVerified(apiKey: string, fromEmail: string, fetchImpl: typeof fetch): Promise<boolean>;
   getCorsHeaders(origin: string | null | undefined, allowedOrigins: Set<string>): Record<string, string>;
   isWithinIdempotencyWindow(createdAt: string): boolean;
+  normalizeTrustedClientIp(value: string | null): string | null;
+  hashIpForRateLimit(ip: string, secret: string): Promise<string>;
   sendClaimedJob(job: EmailJob, options: Record<string, unknown>): Promise<JobResult>;
 }
 
@@ -122,6 +124,59 @@ async function processJobs(jobs: EmailJob[]) {
     }
   }
   return results;
+}
+
+function buildRateLimitResponse(origin: string | null | undefined, reason: string) {
+  const headers = getCorsHeaders(origin);
+  const retryAfterSeconds = reason === "daily_limit" ? 86400
+    : reason === "hour_limit" ? 3600
+      : 60;
+  headers["Retry-After"] = String(retryAfterSeconds);
+  headers["Cache-Control"] = "no-store";
+  return new Response(JSON.stringify({
+    ok: false,
+    status: "rate_limited",
+    error: "Too many requests from this network. Please wait before trying again.",
+  }), { status: 429, headers });
+}
+
+async function enforcePublicIpRateLimit(req: Request, origin?: string | null): Promise<Response | null> {
+  // Use the gateway-populated CF-Connecting-IP header; never trust arbitrary
+  // X-Forwarded-For text supplied by a browser.
+  const clientIp = WAITLIST_EMAIL_CORE.normalizeTrustedClientIp(req.headers.get("cf-connecting-ip"));
+  if (!clientIp) {
+    console.warn("[Waitlist Rate Limit] Trusted client IP unavailable; email limits remain active.");
+    return null;
+  }
+
+  // Prefer a dedicated key. The current recovery secret is a domain-separated
+  // fallback, so this protection works before a dedicated secret is configured.
+  const rateLimitSecret = Deno.env.get("WAITLIST_RATE_LIMIT_HMAC_SECRET")?.trim()
+    || Deno.env.get("EMAIL_RECOVERY_SECRET")?.trim()
+    || "";
+  if (!rateLimitSecret) {
+    console.error("[Waitlist Rate Limit] HMAC secret unavailable; IP limits skipped.");
+    return null;
+  }
+
+  try {
+    const ipHash = await WAITLIST_EMAIL_CORE.hashIpForRateLimit(clientIp, rateLimitSecret);
+    const result = await callServiceRpc<Array<{ allowed: boolean; reason: string }>>(
+      "consume_waitlist_ip_rate_limit",
+      { p_ip_hash: ipHash },
+    );
+    if (!Array.isArray(result) || result.length === 0 || typeof result[0].allowed !== "boolean") {
+      throw new Error("IP rate-limit RPC returned an invalid result.");
+    }
+    if (result[0].allowed) return null;
+    console.warn("[Waitlist Rate Limit] Public action rejected by IP quota:", result[0].reason || "rate_limited");
+    return buildRateLimitResponse(origin, result[0].reason || "minute_limit");
+  } catch (error) {
+    // Keep registrations available if only this independent limiter fails;
+    // the email limiter and duplicate-registration safeguards still apply.
+    console.error("[Waitlist Rate Limit] IP check failed; allowing fallback:", error instanceof Error ? error.message : "unknown error");
+    return null;
+  }
 }
 
 async function registerWaitlist(body: Partial<EmailRequest>, origin?: string | null) {
@@ -288,6 +343,11 @@ Deno.serve(async (req: Request) => {
   try {
     const body = (await req.json()) as Partial<EmailRequest>;
     const { full_name, email, whatsapp_url } = body;
+
+    if (body.action === "register" || body.action === "request_resend") {
+      const ipLimitResponse = await enforcePublicIpRateLimit(req, origin);
+      if (ipLimitResponse) return ipLimitResponse;
+    }
 
     if (body.action === "register") {
       return await registerWaitlist(body, origin);
