@@ -38,6 +38,10 @@ Use the findings to answer:
 
 A stated price preference is not a purchase commitment. Before fixing the final price or investing heavily in production, run a small validation step such as a clear course outline plus price test, refundable deposit/pre-order (with clear terms), or direct interviews with a sample of interested learners.
 
+## Data quality note
+
+The experience and payment-preference questions previously preselected their first radio option. New visitors should now choose deliberately or leave these optional questions unanswered; there is no longer an implicit default answer. This improves future response quality without changing the required registration fields or the email flow. Older records do not record whether those choices were actively selected or simply left at the old default, so treat historical experience/payment percentages as provisional rather than confirmed intent.
+
 ## What the current data cannot tell us
 
 The current waitlist stores completed registrations, not page views or traffic-source attribution. It cannot calculate a true landing-page conversion rate or reliably tell which Instagram post, WhatsApp share, or campaign brought a registration. That would require additional, privacy-conscious analytics/UTM tracking and a count of page visits. Do not infer campaign performance from registration dates alone.
