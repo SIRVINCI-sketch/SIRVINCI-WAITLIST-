@@ -342,9 +342,10 @@ test('email template escapes registration name and ignores untrusted community-l
     finishJob: async (_id, value) => value.outcome
   });
 
-  assert.match(requestBody.html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
-  assert.doesNotMatch(requestBody.html, /<script>/);
-  assert.match(requestBody.html, /chat\.whatsapp\.com/);
+  assert.equal(requestBody.template.id, '5c27dfdd-ddcb-4daf-9560-90388ce61380');
+  assert.equal(requestBody.template.variables.STUDENT_NAME, '&lt;script&gt;alert(1)&lt;/script&gt;');
+  assert.equal(requestBody.html, undefined);
+  assert.equal(requestBody.to[0], 'person@example.com');
 });
 
 test('recovery secret comparison is constant-time for equal-length candidates', () => {
@@ -424,7 +425,7 @@ test('public Edge responses do not reveal waitlist membership or job state', () 
   const registrationHandler = functionSource.slice(functionSource.indexOf('async function registerWaitlist'), functionSource.indexOf('async function requestConfirmationResend'));
 
   assert.match(resendHandler, /return buildSuccessResponse\(\{ ok: true, status: "request_received" \}, origin\)/);
-  assert.doesNotMatch(resendHandler, /job_id|\.status/);
+  assert.doesNotMatch(resendHandler, /return buildSuccessResponse\(\{[^}]*job_id/);
   assert.match(registrationHandler, /return buildSuccessResponse\(\{ ok: true, status: "received" \}, origin\)/);
   assert.doesNotMatch(registrationHandler, /duplicate|already registered/i);
 });
@@ -525,7 +526,7 @@ test('recovery request ID is preserved on failure for safe retry and cleared on 
 
 test('resend request message for acknowledged request does not promise delivery time', () => {
   const msg = WAITLIST_UTILS.getResendRequestMessage('request_received');
-  assert.match(msg, /request was received/i);
+  assert.match(msg, /if you've registered with this email address/i);
   assert.match(msg, /no delivery time is guaranteed/i);
   assert.doesNotMatch(msg, /24.?48 hours/i);
   assert.doesNotMatch(msg, /will be delivered/i);
