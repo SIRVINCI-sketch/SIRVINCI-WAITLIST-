@@ -130,6 +130,9 @@ const WAITLIST_UTILS = {
     if (status === 'request_received') {
       return "If you've registered with this email address, we'll try to send your confirmation email again. Please check your inbox and spam folder shortly.";
     }
+    if (status === 'rate_limited') {
+      return 'Too many requests from this network. Please wait before trying again. Your registration is unchanged.';
+    }
     return 'We could not confirm the request outcome. No new registration was created. You may retry later; repeated requests are rate-limited.';
   },
   getRegistrationUncertainMessage() {
@@ -366,6 +369,11 @@ function initWaitlistForm() {
 
       try {
         const { response, data } = await sendResendRequest(currentRegistrationEmail, currentResendRequestId);
+        if (response.status === 429) {
+          if (resendFeedback) resendFeedback.textContent = WAITLIST_UTILS.getResendRequestMessage('rate_limited');
+          currentResendRequestId = null;
+          return;
+        }
         if (!response.ok || !data || data.status !== 'request_received') {
           throw new Error('Confirmation request was not acknowledged.');
         }
@@ -557,6 +565,11 @@ function initRecoveryForm() {
 
     try {
       const { response, data } = await sendResendRequest(emailVal, recoveryRequestId);
+      if (response.status === 429) {
+        if (recoveryFeedback) recoveryFeedback.textContent = WAITLIST_UTILS.getResendRequestMessage('rate_limited');
+        recoveryRequestId = null;
+        return;
+      }
       if (!response.ok || !data || data.status !== 'request_received') {
         throw new Error('Confirmation request was not acknowledged.');
       }
