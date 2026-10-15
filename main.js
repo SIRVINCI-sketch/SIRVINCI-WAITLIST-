@@ -128,6 +128,15 @@ const WAITLIST_UTILS = {
   },
   getResendRequestMessage(status) {
     if (status === 'request_received') {
+      return "If you've registered with this email address, we'll try to send your confirmation email again. No delivery time is guaranteed; please check your inbox and spam folder.";
+    }
+    if (status === 'rate_limited') {
+      return 'Too many requests from this network. Please wait before trying again. Your registration is unchanged.';
+    }
+    return 'We could not confirm the request outcome. No new registration was created. You may retry later; repeated requests are rate-limited.';
+  },
+  getPostRegistrationResendMessage(status) {
+    if (status === 'request_received') {
       return "Your request was received. If an eligible registration matches this address, the system will attempt safe recovery when sender settings permit. No new registration is created, and no delivery time is guaranteed.";
     }
     if (status === 'rate_limited') {
@@ -378,7 +387,7 @@ function initWaitlistForm() {
           throw new Error('Confirmation request was not acknowledged.');
         }
         if (resendFeedback) {
-          resendFeedback.innerHTML = `<strong>Request received!</strong><br>${WAITLIST_UTILS.getResendRequestMessage(data.status)}`;
+          resendFeedback.innerHTML = `<strong>Request received!</strong><br>${WAITLIST_UTILS.getPostRegistrationResendMessage(data.status)}`;
         }
         currentResendRequestId = null;
       } catch (error) {
