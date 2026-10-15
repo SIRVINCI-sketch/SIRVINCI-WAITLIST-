@@ -104,3 +104,16 @@ ORDER BY created_at;
 SELECT created_at, full_name, email
 FROM public.waitlist
 ORDER BY created_at;
+
+
+-- Structured pricing analysis. Compare amounts only within the same currency.
+SELECT country_of_residence, expected_cost_currency,
+  count(*) FILTER (WHERE expected_cost_amount IS NOT NULL) AS numeric_price_responses,
+  percentile_cont(0.5) WITHIN GROUP (ORDER BY expected_cost_amount) FILTER (WHERE expected_cost_amount IS NOT NULL) AS median_amount,
+  min(expected_cost_amount) AS minimum_amount,
+  max(expected_cost_amount) AS maximum_amount,
+  count(*) FILTER (WHERE pricing_unsure) AS unsure_responses
+FROM public.waitlist
+WHERE country_of_residence IS NOT NULL
+GROUP BY country_of_residence, expected_cost_currency
+ORDER BY country_of_residence, expected_cost_currency;
