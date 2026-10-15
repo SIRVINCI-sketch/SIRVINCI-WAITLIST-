@@ -235,13 +235,13 @@ button, input, select {
 .btn-primary {
   background-color: #fef457;
   color: var(--text-on-accent);
-  border-color: var(--color-accent);
+  border-color: #fef457;
   box-shadow: 0 4px 20px var(--color-accent-glow);
 }
 
 .btn-primary:hover {
   background-color: #fef457;
-  border-color: var(--color-accent-hover);
+  border-color: #fef457;
   transform: scale(1.03);
   box-shadow: 0 6px 30px var(--color-accent-glow-strong);
 }
