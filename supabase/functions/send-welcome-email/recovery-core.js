@@ -34,7 +34,7 @@
 
   function getCorsHeaders(origin, allowedOrigins) {
     const headers = {
-      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, origin',
+      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, origin, x-email-recovery-secret',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Content-Type': 'application/json'
     };
@@ -44,14 +44,22 @@
     return headers;
   }
 
+  function extractSenderEmail(from) {
+    if (typeof from !== 'string') return '';
+    const match = from.match(/<([^>]+)>/);
+    return (match ? match[1] : from).trim();
+  }
+
   function isSenderConfigurationValid(apiKey, fromEmail) {
+    const email = extractSenderEmail(fromEmail);
     return typeof apiKey === 'string' && apiKey.trim().length > 0 &&
-      typeof fromEmail === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromEmail.trim());
+      typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
   async function isSenderDomainVerified(apiKey, fromEmail, fetchImpl) {
     if (!isSenderConfigurationValid(apiKey, fromEmail)) return false;
-    const senderDomain = fromEmail.trim().split('@').pop().toLowerCase();
+    const senderEmail = extractSenderEmail(fromEmail);
+    const senderDomain = senderEmail.split('@').pop().toLowerCase();
     try {
       const response = await fetchImpl('https://api.resend.com/domains', {
         headers: { Authorization: `Bearer ${apiKey}` }
@@ -104,9 +112,6 @@
     }
 
     const firstName = escapeHtml(String(job.full_name || 'Creator').trim().split(/\s+/)[0] || 'Creator');
-    const communityUrl = 'https://chat.whatsapp.com/DwUFjABTAPCA9BNmIS5SXc';
-    const subject = "You're on the list! Welcome to Sirvinci Academy";
-    const html = `<!doctype html><html><body style="font-family:Arial,sans-serif;color:#111"><main style="max-width:540px;margin:auto;padding:32px"><h1>You're on the waitlist, ${firstName}!</h1><p>Your registration for Sirvinci Academy is saved. We will send launch updates and founding-member information to this address.</p><p><a href="${communityUrl}">Join the Sirvinci creator community</a></p><p>— Sirvinci Academy</p></main></body></html>`;
     const idempotencyKey = `sirvinci-waitlist-${job.idempotency_key}`;
 
     let providerResponse;
@@ -118,7 +123,14 @@
           'Content-Type': 'application/json',
           'Idempotency-Key': idempotencyKey
         },
-        body: JSON.stringify({ from: fromEmail, to: [job.email], subject, html })
+        body: JSON.stringify({
+          from: fromEmail,
+          to: [job.email],
+          template: {
+            id: "5c27dfdd-ddcb-4daf-9560-90388ce61380",
+            variables: { STUDENT_NAME: firstName }
+          }
+        })
       });
     } catch {
       const outcome = isWithinIdempotencyWindow(job.created_at, now) ? 'retryable' : 'uncertain';
@@ -171,6 +183,7 @@
     escapeHtml,
     constantTimeEquals,
     getCorsHeaders,
+    extractSenderEmail,
     isSenderConfigurationValid,
     isSenderDomainVerified,
     isWithinIdempotencyWindow,
