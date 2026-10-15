@@ -37,7 +37,7 @@ Then visit **`http://localhost:3030/`** in your browser.
 ---
 
 ## 🌐 Canonical Production & Deployment URLs
-The official canonical public waitlist website is:
+The waitlist is the pre-launch interest and lead-capture page for Sirvinci Academy's self-paced, mobile-first Canva design masterclass planned for the 2027 cohort. It collects contact details and optional information about learner experience, goals, barriers, payment preference, and expected price so the team can estimate demand, understand the audience, and contact interested learners about launch/enrolment. Joining the list is not a paid enrolment or a guarantee of a place.\n\nThe official canonical public waitlist website is:
 - **`https://waitlist.sirvinci.com/`**
 
 Authorized Vercel deployment and preview aliases:
@@ -61,7 +61,7 @@ The browser submits to the `send-welcome-email` Edge Function. The function uses
 
 New registrations atomically create a private email outbox job through a database trigger. The Edge Function sends using the `RESEND_API_KEY` and `RESEND_FROM_EMAIL` secrets; the database outbox tracks accepted, retryable, blocked, failed, and uncertain outcomes. The scheduled worker runs every five minutes and only includes blocked jobs in recovery after Resend reports the configured sender domain as verified. Recovery requests are authenticated with `EMAIL_RECOVERY_SECRET`, mirrored in Supabase Vault for the scheduled job.
 
-Students can explicitly request a confirmation resend from the saved-registration screen. Requests reuse an idempotency UUID, are limited to one per email per 15 minutes and three per rolling day, and receive a generic acknowledgment that does not disclose whether an email address is registered. Legacy registrations without outbox history are held as uncertain until the student requests recovery; no historical registrations are automatically resent.
+Students can explicitly request a confirmation resend from the saved-registration screen. Requests reuse an idempotency UUID and are limited per email to a 10-second cooldown, 3 requests per rolling minute, 10 per rolling hour, and 20 per rolling 24 hours. The endpoint also uses a generic acknowledgment that does not disclose whether an email address is registered. These per-email controls are complemented by database row locks and idempotent job handling; a trusted edge/IP-level abuse limit should be added at the gateway before the waitlist receives significant public traffic. Legacy registrations without outbox history are held as uncertain until the student requests recovery; no historical registrations are automatically resent.
 
 Apply the migrations in `supabase/migrations/` to a linked Supabase project. Run isolated logic tests with `node --test tests/waitlist-flow.test.js`; run the rollback-only live schema/queue integration test with `npx supabase db query --linked --file tests/waitlist-recovery.integration.sql`.
 
