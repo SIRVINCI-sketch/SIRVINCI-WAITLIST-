@@ -8,7 +8,7 @@
   <title>Sirvinci Academy — Learn to Design Like a Professional, From Your Phone</title>
   <meta name="title" content="Sirvinci Academy — Learn to Design Like a Professional, From Your Phone">
   <meta name="description" content="A self-paced masterclass in Canva design by Sirvinci Creative Studio, built for total beginners and experienced designers alike. No laptop required.">
-  <meta name="theme-color" content="#0A0A0A">
+  <meta name="theme-color" content="#010070">
   <link rel="canonical" href="https://waitlist.sirvincistudio.com/">
 
   <!-- Open Graph / Facebook / LinkedIn / Instagram -->
@@ -436,17 +436,56 @@
                 </div>
               </div>
 
-              <!-- Field 7: Expected Cost (Compulsory) -->
-              <div class="form-group" id="group-cost">
-                <label for="expected-cost" class="form-label">
-                  What would you expect a course like this to cost?
-                </label>
-                <input type="text" id="expected-cost" name="expected_cost" class="form-input" placeholder="e.g. ₦50,000 / $50" aria-invalid="false" aria-describedby="expected-cost-error" maxlength="120">
-                <span id="expected-cost-error" class="field-error-msg">Please enter what you would expect this course to cost.</span>
+              <div class="form-group" id="group-country">
+                <label for="country-of-residence" class="form-label">Which country do you currently live in? <span class="required-star">*</span></label>
+                <div class="select-wrapper">
+                  <select id="country-of-residence" name="country_of_residence" class="form-select" required aria-invalid="false" aria-describedby="country-of-residence-error">
+                    <option value="" disabled selected>Select your country...</option>
+                    <option value="Nigeria">Nigeria</option><option value="United States">United States</option><option value="United Kingdom">United Kingdom</option><option value="Canada">Canada</option><option value="Australia">Australia</option><option value="New Zealand">New Zealand</option><option value="Ireland">Ireland</option><option value="Germany">Germany</option><option value="France">France</option><option value="Netherlands">Netherlands</option><option value="Belgium">Belgium</option><option value="Spain">Spain</option><option value="Italy">Italy</option><option value="Portugal">Portugal</option><option value="Switzerland">Switzerland</option><option value="Sweden">Sweden</option><option value="Norway">Norway</option><option value="Denmark">Denmark</option><option value="Poland">Poland</option><option value="South Africa">South Africa</option><option value="Ghana">Ghana</option><option value="Kenya">Kenya</option><option value="United Arab Emirates">United Arab Emirates</option><option value="Saudi Arabia">Saudi Arabia</option><option value="India">India</option><option value="Pakistan">Pakistan</option><option value="Bangladesh">Bangladesh</option><option value="Other">Other country</option>
+                  </select>
+                  <svg class="select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+                <span id="country-of-residence-error" class="field-error-msg">Please select your country of residence.</span>
+                <div id="country-other-wrap" class="conditional-fields" hidden>
+                  <label for="country-other" class="form-label">Enter your country</label>
+                  <input type="text" id="country-other" name="country_other" class="form-input" maxlength="100" autocomplete="country-name" aria-describedby="country-other-error">
+                  <span id="country-other-error" class="field-error-msg">Please enter your country.</span>
+                </div>
+              </div>
+              <div class="form-group" id="group-pricing-choice">
+                <label class="form-label">How much would you realistically be willing to pay for the full Sirvinci Academy Canva Masterclass? <span class="required-star">*</span></label>
+                <p class="form-help-text">Your answer helps us set a fair price for students in different countries. This is research only and does not commit you to purchasing the course.</p>
+                <div class="radio-stack">
+                  <label class="radio-card"><input type="radio" name="pricing_choice" value="amount"><span class="radio-custom"></span><span class="radio-text">I have an amount in mind</span></label>
+                  <label class="radio-card"><input type="radio" name="pricing_choice" value="unsure"><span class="radio-custom"></span><span class="radio-text">I'm not sure yet</span></label>
+                </div>
+                <span id="pricing-choice-error" class="field-error-msg">Choose an amount or select “I'm not sure yet.”</span>
+              </div>
+              <div id="pricing-amount-fields" class="conditional-fields" hidden>
+                <div class="form-group" id="group-cost-amount">
+                  <label for="expected-cost-amount" class="form-label">Amount <span class="required-star">*</span></label>
+                  <input type="number" id="expected-cost-amount" name="expected_cost_amount" class="form-input" placeholder="e.g. 15000" min="0.01" max="999999999" step="0.01" inputmode="decimal" aria-invalid="false" aria-describedby="expected-cost-amount-error">
+                  <span id="expected-cost-amount-error" class="field-error-msg">Enter an amount greater than zero.</span>
+                </div>
+                <div class="form-group" id="group-cost-currency">
+                  <label for="expected-cost-currency" class="form-label">Currency <span class="required-star">*</span></label>
+                  <div class="select-wrapper">
+                    <select id="expected-cost-currency" name="expected_cost_currency" class="form-select" aria-invalid="false" aria-describedby="expected-cost-currency-error">
+                      <option value="" disabled selected>Select a currency...</option><option value="NGN">NGN — Nigerian naira</option><option value="USD">USD — US dollar</option><option value="GBP">GBP — British pound</option><option value="EUR">EUR — Euro</option><option value="CAD">CAD — Canadian dollar</option><option value="AUD">AUD — Australian dollar</option><option value="NZD">NZD — New Zealand dollar</option><option value="ZAR">ZAR — South African rand</option><option value="GHS">GHS — Ghanaian cedi</option><option value="KES">KES — Kenyan shilling</option><option value="AED">AED — UAE dirham</option><option value="INR">INR — Indian rupee</option><option value="OTHER">Other currency</option>
+                    </select>
+                    <svg class="select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  </div>
+                  <span id="expected-cost-currency-error" class="field-error-msg">Please select the currency for your amount.</span>
+                  <div id="other-currency-wrap" class="conditional-fields" hidden>
+                    <label for="other-currency-code" class="form-label">Currency code (3 letters)</label>
+                    <input type="text" id="other-currency-code" name="other_currency_code" class="form-input" placeholder="e.g. JPY" maxlength="3" autocapitalize="characters" aria-describedby="other-currency-code-error">
+                    <span id="other-currency-code-error" class="field-error-msg">Enter a valid 3-letter currency code.</span>
+                  </div>
+                </div>
               </div>
 
               <!-- Submission Alert Banner (For errors/offline) -->
-              <div id="form-error-banner" role="alert" aria-live="assertive" style="display:none;margin-bottom:18px;padding:12px 16px;background:rgba(255,94,94,0.12);border:1px solid rgba(255,94,94,0.3);border-radius:10px;color:#FF7B7B;font-size:0.9rem;text-align:center;">
+              <div id="form-error-banner" role="alert" aria-live="assertive" style="display:none;margin-bottom:18px;padding:12px 16px;background:rgba(254,244,87,0.35);border:1px solid rgba(1,0,112,0.25);border-radius:10px;color:#010070;font-size:0.9rem;text-align:center;">
               </div>
 
               <!-- Submit Button -->
