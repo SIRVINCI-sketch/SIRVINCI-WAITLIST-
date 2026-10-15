@@ -42,7 +42,9 @@ Then visit **`http://localhost:3030/`** in your browser.
 ---
 
 ## 🌐 Canonical Production & Deployment URLs
-The waitlist is the pre-launch interest and lead-capture page for Sirvinci Academy's self-paced, mobile-first Canva design masterclass planned for the 2027 cohort. It collects contact details and optional information about learner experience, goals, barriers, payment preference, and expected price so the team can estimate demand, understand the audience, and contact interested learners about launch/enrolment. Joining the list is not a paid enrolment or a guarantee of a place.\n\nThe official canonical public waitlist website is:
+The waitlist is the pre-launch interest and lead-capture page for Sirvinci Academy's self-paced, mobile-first Canva design masterclass planned for the 2027 cohort. It collects contact details and optional information about learner experience, goals, barriers, payment preference, and expected price so the team can estimate demand, understand the audience, and contact interested learners about launch/enrolment. Joining the list is not a paid enrolment or a guarantee of a place.
+
+The official canonical public waitlist website is:
 - **`https://waitlist.sirvincistudio.com/`**
 
 Authorized Vercel deployment and preview aliases:
