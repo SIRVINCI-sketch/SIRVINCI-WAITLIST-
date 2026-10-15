@@ -66,3 +66,8 @@ The current waitlist stores completed registrations, not page views or traffic-s
 - [ ] At close-out, export the aggregate report and an anonymised response dataset.
 - [ ] Decide the first cohort size, curriculum priorities, price test, launch messages, and follow-up schedule.
 - [ ] Restrict access to the contact CSV and delete temporary working copies when analysis is complete.
+
+
+## International price analysis
+
+New waitlist submissions must provide country of residence and either a positive numeric price plus currency or “I'm not sure yet.” Use `expected_cost_amount`, `expected_cost_currency`, `country_of_residence`, and `pricing_unsure` to calculate medians/ranges by market and currency. Do not average values across currencies without an explicit exchange-rate methodology. The older `expected_cost` text field is retained for historical responses and readable exports; older entries may have no structured amount/currency/country values.
