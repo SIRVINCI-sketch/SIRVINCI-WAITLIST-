@@ -1752,3 +1752,21 @@ button, input, select {
 /* Supporting styles for the added information-acquiring section. */
 .conditional-fields[hidden] { display: none !important; }
 .form-help-text { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.55; margin: 0 0 14px; }
+
+/* --- BUTTON COLOR OVERRIDE: requested palette only --- */
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+.btn,
+[role="button"] {
+  background-color: #fef457 !important;
+  color: #010070 !important;
+}
+
+button *,
+.btn *,
+[role="button"] * {
+  color: #010070 !important;
+}
+
