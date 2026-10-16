@@ -1,7 +1,7 @@
 /* ==========================================================================
    SIRVINCI ACADEMY — Official Platform Stylesheet
    Theme: Dark Mode Only | Base: #0A0A0A | Surface: #161616
-   Primary Brand Accent: Royal Electric Blue (#2F76FF)
+   Primary Brand Accent: Navy Blue (#010070)
    Typography: Space Grotesk & Inter
    ========================================================================== */
 
@@ -13,14 +13,14 @@
   --bg-surface-elevated: #1B1B1B;
   --bg-surface-glass: rgba(20, 20, 20, 0.82);
 
-  /* Primary Brand Accent: Royal Electric Blue */
-  --color-accent: #2F76FF;
-  --color-accent-hover: #4C8BFF;
-  --color-accent-active: #1A60E8;
-  --color-accent-glow: rgba(47, 118, 255, 0.32);
-  --color-accent-glow-strong: rgba(47, 118, 255, 0.55);
-  --color-accent-subtle: rgba(47, 118, 255, 0.12);
-  --color-accent-border: rgba(47, 118, 255, 0.38);
+  /* Primary Brand Accent: Navy Blue */
+  --color-accent: #010070;
+  --color-accent-hover: #010070;
+  --color-accent-active: #010070;
+  --color-accent-glow: rgba(1, 0, 112, 0.32);
+  --color-accent-glow-strong: rgba(1, 0, 112, 0.55);
+  --color-accent-subtle: rgba(1, 0, 112, 0.12);
+  --color-accent-border: rgba(1, 0, 112, 0.38);
 
   /* Text & Content */
   --text-primary: #F5F5F5;
@@ -31,12 +31,12 @@
   /* Hairline Borders */
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-hover: rgba(255, 255, 255, 0.18);
-  --border-active: rgba(47, 118, 255, 0.5);
+  --border-active: rgba(1, 0, 112, 0.5);
 
   /* Elevation Shadows */
   --shadow-card: 0 10px 36px rgba(0, 0, 0, 0.55);
   --shadow-glow: 0 0 35px var(--color-accent-glow);
-  --shadow-glow-lg: 0 0 65px rgba(47, 118, 255, 0.22);
+  --shadow-glow-lg: 0 0 65px rgba(1, 0, 112, 0.22);
 
   /* Typography */
   --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -151,7 +151,7 @@ button, input, select {
   transform: translateX(-50%);
   width: min(700px, 92vw);
   height: min(480px, 65vh);
-  background: radial-gradient(circle, rgba(47, 118, 255, 0.22) 0%, rgba(47, 118, 255, 0.05) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(1, 0, 112, 0.22) 0%, rgba(1, 0, 112, 0.05) 50%, transparent 70%);
   animation: orbFloat 12s ease-in-out infinite alternate;
 }
 
@@ -231,7 +231,7 @@ button, input, select {
   text-decoration: none;
 }
 
-/* Primary CTA Button (Brand Blue) */
+/* Primary CTA Button (Brand Navy) */
 .btn-primary {
   background-color: var(--color-accent);
   color: var(--text-on-accent);
@@ -868,7 +868,7 @@ button, input, select {
   background: rgba(18, 22, 34, 0.75);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(47, 118, 255, 0.18);
+  border: 1px solid rgba(1, 0, 112, 0.18);
   border-radius: 14px;
   padding: 16px 14px;
   text-align: center;
@@ -877,14 +877,14 @@ button, input, select {
 
 .instructor-stat-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(47, 118, 255, 0.4);
+  border-color: rgba(1, 0, 112, 0.4);
 }
 
 .instructor-stat-card .stat-number {
   font-family: var(--font-display);
   font-size: clamp(1.6rem, 2.5vw, 2rem);
   font-weight: 800;
-  color: #38b6ff;
+  color: #010070;
   line-height: 1.1;
   letter-spacing: -0.02em;
 }
@@ -938,9 +938,9 @@ button, input, select {
   align-items: center;
   font-size: 0.78rem;
   font-weight: 600;
-  color: #38b6ff;
-  background: rgba(47, 118, 255, 0.08);
-  border: 1px solid rgba(47, 118, 255, 0.22);
+  color: #010070;
+  background: rgba(1, 0, 112, 0.08);
+  border: 1px solid rgba(1, 0, 112, 0.22);
   border-radius: 9999px;
   padding: 6px 14px;
   letter-spacing: 0.01em;
@@ -948,8 +948,8 @@ button, input, select {
 }
 
 .skill-tag:hover {
-  background: rgba(47, 118, 255, 0.16);
-  border-color: rgba(47, 118, 255, 0.45);
+  background: rgba(1, 0, 112, 0.16);
+  border-color: rgba(1, 0, 112, 0.45);
   transform: translateY(-1px);
 }
 
