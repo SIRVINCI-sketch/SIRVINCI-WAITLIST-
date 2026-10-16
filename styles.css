@@ -1770,3 +1770,13 @@ button *,
   color: #010070 !important;
 }
 
+/* --- FAQ trigger color correction --- */
+.faq-trigger {
+  background-color: #010070 !important;
+  color: #fef457 !important;
+}
+
+.faq-trigger * {
+  color: #fef457 !important;
+}
+
