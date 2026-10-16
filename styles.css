@@ -1753,7 +1753,7 @@ button, input, select {
 .conditional-fields[hidden] { display: none !important; }
 .form-help-text { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.55; margin: 0 0 14px; }
 
-/* --- BUTTON COLOR OVERRIDE: requested palette only --- */
+/* --- BUTTON BACKGROUND OVERRIDE: requested palette only --- */
 button,
 input[type="button"],
 input[type="submit"],
@@ -1761,22 +1761,9 @@ input[type="reset"],
 .btn,
 [role="button"] {
   background-color: #fef457 !important;
-  color: #010070 !important;
 }
 
-button *,
-.btn *,
-[role="button"] * {
-  color: #010070 !important;
-}
-
-/* --- FAQ trigger color correction --- */
+/* Keep FAQ triggers navy as requested; retain their original text/icon colors. */
 .faq-trigger {
   background-color: #010070 !important;
-  color: #fef457 !important;
 }
-
-.faq-trigger * {
-  color: #fef457 !important;
-}
-
