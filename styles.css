@@ -1767,3 +1767,14 @@ input[type="reset"],
 .faq-trigger {
   background-color: #010070 !important;
 }
+
+
+/* Use navy text on yellow buttons; preserve the FAQ trigger's existing text/icon colors. */
+button:not(.faq-trigger),
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+.btn:not(.faq-trigger),
+[role="button"]:not(.faq-trigger) {
+  color: #010070 !important;
+}
