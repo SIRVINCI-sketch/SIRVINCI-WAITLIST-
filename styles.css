@@ -23,7 +23,7 @@
   --color-accent-border: rgba(1, 0, 112, 0.38);
 
   /* Text & Content */
-  --text-primary: #F5F5F5;
+  --text-primary: #f4f4f4;
   --text-secondary: #A3A3A3;
   --text-muted: #737373;
   --text-on-accent: #FFFFFF;
@@ -187,7 +187,7 @@ button, input, select {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-accent);
+  color: #f4f4f4;
   margin-bottom: 12px;
 }
 
@@ -492,7 +492,7 @@ button, input, select {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-accent);
+  color: #f4f4f4;
   background: var(--color-accent-subtle);
   border: 1px solid var(--color-accent-border);
   padding: 6px 16px;
@@ -510,7 +510,7 @@ button, input, select {
 }
 
 .hero-headline .accent-text {
-  color: var(--color-accent);
+  color: #fef457;
   display: inline;
 }
 
@@ -679,7 +679,7 @@ button, input, select {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-accent);
+  color: #f4f4f4;
   margin-bottom: 20px;
 }
 
@@ -745,7 +745,7 @@ button, input, select {
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.12em;
-  color: var(--color-accent);
+  color: #f4f4f4;
   background: var(--color-accent-subtle);
   border: 1px solid var(--color-accent-border);
   padding: 4px 10px;
@@ -777,7 +777,7 @@ button, input, select {
 }
 
 .who-bottom-statement .accent-highlight {
-  color: var(--color-accent);
+  color: #fef457;
 }
 
 /* --- 12. ABOUT / INSTRUCTOR SECTION --- */
@@ -852,7 +852,7 @@ button, input, select {
 .badge-role {
   font-size: 0.78rem;
   font-weight: 500;
-  color: var(--color-accent);
+  color: #f4f4f4;
   margin-top: 3px;
 }
 
@@ -884,7 +884,7 @@ button, input, select {
   font-family: var(--font-display);
   font-size: clamp(1.6rem, 2.5vw, 2rem);
   font-weight: 800;
-  color: #010070;
+  color: #f4f4f4;
   line-height: 1.1;
   letter-spacing: -0.02em;
 }
@@ -938,7 +938,7 @@ button, input, select {
   align-items: center;
   font-size: 0.78rem;
   font-weight: 600;
-  color: #010070;
+  color: #f4f4f4;
   background: rgba(1, 0, 112, 0.08);
   border: 1px solid rgba(1, 0, 112, 0.22);
   border-radius: 9999px;
@@ -1030,7 +1030,7 @@ button, input, select {
 }
 
 .required-star {
-  color: var(--color-accent);
+  color: #f4f4f4;
 }
 
 .optional-hint {
@@ -1207,7 +1207,7 @@ button, input, select {
   align-items: center;
   justify-content: center;
   margin-bottom: 20px;
-  color: var(--color-accent);
+  color: #f4f4f4;
 }
 
 .checkmark-circle {
@@ -1286,7 +1286,7 @@ button, input, select {
 }
 
 .recovery-icon {
-  color: var(--color-accent);
+  color: #f4f4f4;
   flex-shrink: 0;
 }
 
@@ -1488,7 +1488,7 @@ button, input, select {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: var(--color-accent);
+  color: #f4f4f4;
   transition: transform var(--transition-smooth), background var(--transition-smooth);
 }
 
@@ -1626,7 +1626,7 @@ button, input, select {
 }
 
 .social-link:hover {
-  color: var(--color-accent);
+  color: #f4f4f4;
   border-color: var(--color-accent-border);
   transform: translateY(-2px);
   box-shadow: 0 0 16px var(--color-accent-subtle);
@@ -1644,7 +1644,7 @@ button, input, select {
 }
 
 .footer-email:hover {
-  color: var(--color-accent);
+  color: #f4f4f4;
 }
 
 .copyright {
